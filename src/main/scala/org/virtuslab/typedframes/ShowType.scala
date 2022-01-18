@@ -1,4 +1,4 @@
-package org.virtuslab.typedspark
+package org.virtuslab.typedframes
 
 import scala.quoted.*
 

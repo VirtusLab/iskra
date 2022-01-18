@@ -9,9 +9,8 @@ import scala3encoders.given
 
 import org.apache.spark.sql.SparkSession
 
-case class Foo(a: String, b: Int)
-case class Bar(b: Int, c: String, d: Baz)
-case class Baz(x: Int)
+case class Foo(a: String, b: Int, bb: Int)
+case class Bar(b: Int, bb: Int, c: String)
 
 case class FooBar(a: String, b: Int, c: String)
 
@@ -27,8 +26,7 @@ object HellSpark {
 
     import spark.implicits._
 
-    // import TypedSpark.{toTypedDF, toTypedDFNamed, SchemaFor, $, TypedColumn, asDF, +} // No idea why `import TypedSpark.given` or `import TypedSpark.schemaFromMirror` is not needed
-    import org.virtuslab.typedspark.TypedSpark.*
+    import org.virtuslab.typedframes.{*, given}
 
     val ints = Seq(1, 2, 3, 4).toTypedDF["i"]
     ints.show()
@@ -37,8 +35,8 @@ object HellSpark {
     strings.show()
 
     val foos = Seq(
-      Foo("aaaa", 1),
-      Foo("bbbb", 2)
+      Foo("aaaa", 1, 10),
+      Foo("bbbb", 2, 20)
     ).toTypedDF
 
     foos.show()
@@ -52,6 +50,11 @@ object HellSpark {
     afterSelect.select($.bb.named["bbb"]).show()
 
     // afterSelect.select($.bc.named["bbb"]).show() // <- This won't compile
+
+    val bars = Seq(
+      Bar(1, 10, "zzz"),
+      Bar(2, 20, "yyy")
+    ).toTypedDF
 
     spark.stop()
   }

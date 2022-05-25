@@ -4,13 +4,10 @@
  * - structure code better
  * - simplify macros
  * - drop `Typed` prefix from names but assure everything is usable in a way that names don't get confused with untyped ones taken directly from Spark API
+ * - distinguish between named and unnamed columns? Disallow multiple columns with the same name in a frame?
  */
 
 package org.virtuslab.typedframes
-
-import scala.quoted.*
-
-import Internals.*
 
 //////////////////////
 

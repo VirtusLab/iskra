@@ -3,44 +3,62 @@ package org.virtuslab.typedframes
 import scala.quoted._
 import scala.deriving.Mirror
 import scala.compiletime.erasedValue
-// import org.apache.spark.sql.functions.col
-import Internals.Name
+import Internals.{Name, NameLike}
 
-sealed trait FrameSchema
+sealed trait FrameSchema:
+  //private def elems
+  override def toString =
+    val elems = FrameSchema.elems(this).map((label, typeName) => s"${label}: ${typeName}").mkString(", ")
+    s"FrameSchema {${elems}}"
+
 
 object FrameSchema:
-  object SNil extends FrameSchema
+  object SNil extends FrameSchema//:
   type SNil = SNil.type
+  final case class SCons[N <: Name, H, T <: FrameSchema](headLabel: N, headTypeName: String, tail: T) extends FrameSchema//:
+  private def elems(schema: FrameSchema): List[(String, String)] = schema match
+    case SNil => Nil
+    case SCons(headLabel, headTypeName, tail) => (headLabel, headTypeName) :: elems(tail)
 
-  final case class SCons[N <: Name, H, T <: FrameSchema](headLabel: N, headTypeName: Name, tail: T) extends FrameSchema
+  type FromLabelsAndTypes[Ls <: Tuple, Ts <: Tuple] <: FrameSchema = Ls match
+    case NameLike[elemLabel] *: elemLabels => Ts match
+      case elemType *: elemTypes =>
+        SCons[elemLabel, elemType, FromLabelsAndTypes[elemLabels, elemTypes]]
+    case EmptyTuple => SNil
 
-  // def of[A : FrameSchemaFor] = summon[FrameSchemaFor[A]].schema
+  type WithSingleColumn[N <: Name, ColType] = FromLabelsAndTypes[N *: EmptyTuple, ColType *: EmptyTuple]
 
-  type WithSingleColumn[N <: Name, ColType] = FrameSchemaFromLabelsAndTypes[N *: EmptyTuple, ColType *: EmptyTuple]
+  trait Provider[A]:
+    type Schema <: FrameSchema
 
-import FrameSchema.{ SNil, SCons }
+  object Provider:
+    transparent inline given fromMirror[A](using m: Mirror.ProductOf[A]): Provider[A] = new Provider[A]:
+      type Schema = FromLabelsAndTypes[m.MirroredElemLabels, m.MirroredElemTypes]
 
-trait FrameSchemaFor[A]:
-  type Schema <: FrameSchema
-  // def schema: Schema
+  inline def of[A](using p: Provider[A]): p.Schema = instance[p.Schema]
 
-type FrameSchemaFromLabelsAndTypes[Ls <: Tuple, Ts <: Tuple] <: FrameSchema = Ls match
-  case NameLike[elemLabel] *: elemLabels => Ts match
-    case elemType *: elemTypes =>
-      FrameSchema.SCons[elemLabel, elemType, FrameSchemaFromLabelsAndTypes[elemLabels, elemTypes]]
-  case EmptyTuple => FrameSchema.SNil
+  inline def instance[Schema <: FrameSchema]: Schema = inline erasedValue[Schema] match
+    case _: SNil.type => SNil.asInstanceOf[Schema]
+    case _: SCons[headLabel, headType, tail] =>
+      (new SCons[headLabel, headType, tail](valueOf[headLabel], getTypeName[headType], instance[tail])).asInstanceOf[Schema]
 
-// inline def schemaInstance[Schema <: FrameSchema]: Schema = erasedValue[Schema] match
-//   case _: SNil.type => SNil.asInstanceOf[Schema]
-//   case _: SCons[headLabel, headType, tail] =>
-//     // println("!!!!!!")
-//     // println(headLabel)
-//     // println(headType)
-//     // println(tail)
-//     (new SCons[headLabel, headType, tail](valueOf[headLabel], "FakeType", schemaInstance[tail])).asInstanceOf[Schema]
 
-transparent inline given frameSchemaFromMirror[A](using m: Mirror.ProductOf[A]): FrameSchemaFor[A] = new FrameSchemaFor[A]:
-  type Schema = FrameSchemaFromLabelsAndTypes[m.MirroredElemLabels, m.MirroredElemTypes]
-  // def schema = schemaInstance[Schema]
+  // TODO: Conformance should be recursive
+  // trait Conformance[S1 <: FrameSchema, S2 <: FrameSchema]
 
-type NameLike[T <: Name] = T
+  // object Conformance:
+  //   inline given instance[S1 <: FrameSchema, S2 <: FrameSchema]: Conformance[S1, S2]
+
+  // transparent inline def schemaInstance[Schema <: FrameSchema]: FrameSchema = erasedValue[Schema] match
+  //   case _: SNil.type => SNil
+  //   case _: SCons[headLabel, headType, tail] =>
+  //     // println("!!!!!!")
+  //     // println(headLabel)
+  //     // println(headType)
+  //     // println(tail)
+  //     inline val tailSchema = schemaInstance[tail].asInstanceOf[tail]
+  //     (new SCons[headLabel, headType, tail](valueOf[headLabel], "FakeType", tailSchema))//.asInstanceOf[Schema]
+
+// inline def sconsSchemaInstance[headLabel <: Name, headType, tail <: FrameSchema]: Schema =
+  
+//   erasedValue[Schema] match

@@ -9,7 +9,8 @@ import scala3encoders.given
 
 import org.apache.spark.sql.SparkSession
 
-case class JustInt(int: Int)
+// case class JustInt(int: Int) // int - forbidden field name in a case class? - check at compiletime
+case class JustInt(i: Int)
 
 case class Quux(abc: String)
 
@@ -17,6 +18,12 @@ case class Foo(a: String, b: Int, bb: Int)
 case class Bar(b: Int, bb: Int, c: String)
 
 case class FooBar(a: String, b: Int, c: String)
+
+case class Baz1(i: Int, str: String)
+case class Baz2(str: String, i: Int)
+
+case class Name(first: String, last: String)
+case class Person(id: Int, name: Name)
 
 object HellSpark {
   def main(args: Array[String]): Unit = {
@@ -67,11 +74,13 @@ object HellSpark {
 
     // // afterSelect.select($.bc.named["bbb"]).show() // <- This won't compile
 
-    val bars = Seq(
-      Bar(1, 10, "zzz"),
-      Bar(2, 20, "yyy")
-    ).toTypedDF
 
-    spark.stop()
+    // TODOs:
+
+    // val persons = Seq(
+    //   Person(1, Name("William", "Shakespeare"))
+    // ).toTypedDF
+
+    //persons.select($.name.first).show()
   }
 }

@@ -31,9 +31,15 @@ object TypedDataFrameBuilders:
     }
 
   given foo3: {} with
-    extension [A](inline seq: Seq[A])(using schema: FrameSchemaFor[A])(using encoder: Encoder[A], spark: SparkSession)
+    extension [A](inline seq: Seq[A])(using schema: FrameSchema.Provider[A])(using encoder: Encoder[A], spark: SparkSession)
       inline def toTypedDF: TypedDataFrame[schema.Schema] =
         import spark.implicits.*
         seq.toDF(/* Should we explicitly pass columns here? */).typed
+
+  // given foo4: {} with
+  //   extension [A](inline seq: Seq[A])(using schema: FrameSchema.Provider[A])(using encoder: Encoder[A], spark: SparkSession)
+  //     inline def crash: TypedDataFrame[schema.Schema] =
+  //       import spark.implicits.*
+  //       seq.toDF(/* Should we explicitly pass columns here? */).typed
 
 export TypedDataFrameBuilders.given

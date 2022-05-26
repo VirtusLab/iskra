@@ -14,8 +14,8 @@ def showTypeImpl[A : Type](using quotes: Quotes): Expr[Unit] =
   '{()}
 
 
-inline def getType[A] = ${getTypeImpl[A]}
+inline def getTypeName[A] = ${getTypeNameImpl[A]}
 
-def getTypeImpl[A : Type](using quotes: Quotes): Expr[String] =
+def getTypeNameImpl[A : Type](using quotes: Quotes): Expr[String] =
   import quotes.reflect.*
   Expr(TypeRepr.of[A].show)

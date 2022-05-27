@@ -2,12 +2,13 @@ package org.virtuslab.typedframes
 
 import scala.quoted.*
 import org.apache.spark.sql.{ Column => UntypedColumn}
+import types.{ DataType, StructType }
 import Internals.Name
 
 trait SelectCtx extends SparkOpCtx:
   type CtxOut <: SelectionView
 
-extension [S <: FrameSchema](inline tdf: TypedDataFrame[S])(using svp: SelectionView.Provider[S])
+extension [S <: StructType](inline tdf: TypedDataFrame[S])(using svp: SelectionView.Provider[S])
   inline def select[T](f: SelectCtx { type CtxOut = svp.View } ?=> T)(using mc: MergeColumns[T]): TypedDataFrame[mc.MergedSchema] =
     val ctx: SelectCtx { type CtxOut = svp.View } = new SelectCtx {
       type CtxOut = svp.View
@@ -18,7 +19,7 @@ extension [S <: FrameSchema](inline tdf: TypedDataFrame[S])(using svp: Selection
     (tdf.untyped.select(columns*)).withSchema[mc.MergedSchema]
 
 trait MergeColumns[T]:
-  type MergedSchema <: FrameSchema
+  type MergedSchema <: StructType
   def columns(t: T): List[UntypedColumn]
 
 object MergeColumns:
@@ -34,18 +35,18 @@ object MergeColumns:
 
   def mergeTupleColumnsImpl[T <: Tuple : Type](using Quotes): Expr[MergeColumns[T]] = 
     '{
-      type s = FrameSchema.FromLabelsAndTypes[ColumnsNames[T], ColumnsTypes[T]]
+      type s = StructType.FromLabelsAndTypes[ColumnsNames[T], ColumnsTypes[T]]
       new MergeColumns[T] {
         type MergedSchema = s
-        def columns(t: T): List[UntypedColumn] = t.toList.map(col => col.asInstanceOf[TypedColumn[Name, Any]].underlying) //List(t.underlying)
+        def columns(t: T): List[UntypedColumn] = t.toList.map(col => col.asInstanceOf[TypedColumn[Name, DataType]].underlying) //List(t.underlying)
       }.asInstanceOf[MergeColumns[T] {type MergedSchema = s}]
     }
 
-  transparent inline given mergeSingleColumn[N <: Name, A]: MergeColumns[TypedColumn[N, A]] = ${ mergeSingleColumnImpl[N, A] }
+  transparent inline given mergeSingleColumn[N <: Name, A <: DataType]: MergeColumns[TypedColumn[N, A]] = ${ mergeSingleColumnImpl[N, A] }
 
-  def mergeSingleColumnImpl[N <: Name : Type, A : Type](using Quotes): Expr[MergeColumns[TypedColumn[N, A]]] =
+  def mergeSingleColumnImpl[N <: Name : Type, A <: DataType : Type](using Quotes): Expr[MergeColumns[TypedColumn[N, A]]] =
     '{
-      type s = FrameSchema.WithSingleColumn[N, A]
+      type s = StructType.WithSingleColumn[N, A]
       new MergeColumns[TypedColumn[N, A]] {
         type MergedSchema = s
         def columns(t: TypedColumn[N, A]): List[UntypedColumn] = List(t.underlying)

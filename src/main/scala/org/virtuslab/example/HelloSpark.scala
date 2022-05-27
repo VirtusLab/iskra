@@ -8,6 +8,8 @@ package org.virtuslab.example
 import scala3encoders.given
 
 import org.apache.spark.sql.SparkSession
+import org.virtuslab.typedframes.types.StructType.SCons
+import org.virtuslab.typedframes.types.StringType
 
 // case class JustInt(int: Int) // int - forbidden field name in a case class? - check at compiletime
 case class JustInt(i: Int)
@@ -41,17 +43,18 @@ object HellSpark {
     
     val untypedInts = Seq(1, 2, 3, 4).toDF("int")
     untypedInts.show()
+
     val typedInts = untypedInts.typed[JustInt]
 
-    import org.virtuslab.typedframes.given
-
-    val ints = Seq(1, 2, 3, 4).toTypedDF.withColumn["i"]
+    val ints = Seq(1, 2, 3, 4).toTypedDF("i")
     ints.show()
 
-    val strings = Seq("abc", "def").toTypedDF.withColumn("abc")
+    val strings = Seq("abc", "def").toTypedDF("ab")
     strings.show()
 
-    strings.select($.abc).show()
+    strings.select($.ab, $.ab.named("abcde")).select($.abcde).show()
+
+    import types.{DataType, StructType}
 
     val foos = Seq(
       Foo("aaaa", 1, 10),
@@ -65,22 +68,25 @@ object HellSpark {
     foos.select(($.b + $.b)).show()
     foos.select($.b, $.b).show()
 
-    val afterSelect = foos.select($.a, ($.b + $.b).named["bb"])
+    val afterSelect = foos.select(($.b + $.b).named("i"), $.a.named("str"))
 
     afterSelect.show()
-    
 
-    afterSelect.select($.bb.named["bbb"]).show()
+    println(afterSelect.collect[Baz1]())
 
     // // afterSelect.select($.bc.named["bbb"]).show() // <- This won't compile
 
 
+    val persons = Seq(
+      Person(1, Name("William", "Shakespeare"))
+    ).toTypedDF
+
+    persons.select($.name).show()
+
     // TODOs:
 
-    // val persons = Seq(
-    //   Person(1, Name("William", "Shakespeare"))
-    // ).toTypedDF
+    // persons.select($.name.first).show()
 
-    //persons.select($.name.first).show()
+    spark.stop()
   }
 }

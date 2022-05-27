@@ -11,6 +11,7 @@ def showTypeImpl[A : Type](using quotes: Quotes): Expr[Unit] =
   println("*********")
   println(TypeRepr.of[A].show)
   println(TypeRepr.of[A].widen.show)
+  println(TypeRepr.of[A].dealias.show)
   '{()}
 
 

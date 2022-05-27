@@ -2,20 +2,21 @@ package org.virtuslab.typedframes
 
 import scala.quoted._
 import org.apache.spark.sql.functions.col
+import types.{DataType, StructType}
 
 class SelectionView extends Selectable:
-  def selectDynamic(name: String): TypedColumn[Nothing, Any] =
-    UnnamedTypedColumn[Any](col(name))
+  def selectDynamic(name: String): TypedColumn[Nothing, DataType] =
+    UnnamedTypedColumn[DataType](col(name))
 
 object SelectionView:
-  trait Provider[A <: FrameSchema]:
+  trait Provider[A <: StructType]:
     type View <: SelectionView
     def view: View
 
   object Provider:
-    transparent inline given selectionViewFor[A <: FrameSchema]: Provider[A] = ${selectionViewForImpl[A]}
+    transparent inline given selectionViewFor[A <: StructType]: Provider[A] = ${selectionViewForImpl[A]}
 
-    def selectionViewForImpl[A <: FrameSchema : Type](using Quotes): Expr[SelectionView.Provider[A]] =
+    def selectionViewForImpl[A <: StructType : Type](using Quotes): Expr[SelectionView.Provider[A]] =
       import quotes.reflect.*
 
       selectionView(TypeRepr.of[SelectionView], Type.of[A]).asType match
@@ -28,8 +29,8 @@ object SelectionView:
           }
 
     private def selectionView(using Quotes)(base: quotes.reflect.TypeRepr, frameType: Type[?]): quotes.reflect.TypeRepr =
-      import FrameSchema.*
       import quotes.reflect.*
+      import StructType.{SNil, SCons}
 
       frameType match
         case '[SNil] => base

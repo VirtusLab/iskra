@@ -1,5 +1,5 @@
 // ThisBuild / scalaVersion := "3.1.2"
-ThisBuild / scalaVersion := "3.2.0-RC0-bin-SNAPSHOT" // experimental code completions
+ThisBuild / scalaVersion := "3.2.0-RC1-bin-20220602-42b5941-NIGHTLY" // experimental code completions
 
 val sparkVersion = "3.2.0"
 

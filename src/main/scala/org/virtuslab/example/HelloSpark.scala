@@ -8,13 +8,9 @@ package org.virtuslab.example
 import scala3encoders.given
 
 import org.apache.spark.sql.SparkSession
-import org.virtuslab.typedframes.types.StructType.SCons
-import org.virtuslab.typedframes.types.StringType
+import org.virtuslab.typedframes.types.{DataType, StructType}
 
-// case class JustInt(int: Int) // int - forbidden field name in a case class? - check at compiletime
-case class JustInt(i: Int)
-
-case class Quux(abc: String)
+case class JustInt(int: Int)
 
 case class Foo(a: String, b: Int, bb: Int)
 case class Bar(b: Int, bb: Int, c: String)
@@ -54,8 +50,6 @@ object HellSpark {
 
     strings.select($.ab, $.ab.named("abcde")).select($.abcde).show()
 
-    import types.{DataType, StructType}
-
     val foos = Seq(
       Foo("aaaa", 1, 10),
       Foo("bbbb", 2, 20)
@@ -64,9 +58,9 @@ object HellSpark {
     foos.show()
 
     foos.select($.b.named("b1")).show()
-    foos.select(($.b + $.b).named["b1"]).show()
-    foos.select(($.b + $.b)).show()
+    foos.select(($.b + $.b).named("b2")).show()
     foos.select($.b, $.b).show()
+    foos.select($.*).show()
 
     val afterSelect = foos.select(($.b + $.b).named("i"), $.a.named("str"))
 

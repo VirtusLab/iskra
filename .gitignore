@@ -5,3 +5,4 @@
 .metals/
 target/
 metals.sbt
+/tmp

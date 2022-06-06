@@ -5,15 +5,23 @@ import types.DataType
 import Internals.Name
 
 object TypedColumnOpaqueScope:
-  opaque type TypedColumn[N <: Name, T <: DataType] = UntypedColumn // Should be covariant for T?
+  class TypedColumn[+T <: DataType](val underlying: UntypedColumn) extends AnyVal:
+    type Name <: Internals.Name
 
-  def NamedTypedColumn[N <: Name, T <: DataType](underlying: UntypedColumn): TypedColumn[N, T] = underlying
-  def UnnamedTypedColumn[T <: DataType](underlying: UntypedColumn): TypedColumn[Nothing, T] = underlying
-  extension [N <: Name, T <: DataType](inline tc: TypedColumn[N, T])
-    inline def underlying: UntypedColumn = tc
-    inline def named[N1 <: Name](using v: ValueOf[N1]): TypedColumn[N1, T] =
-      NamedTypedColumn[N1, T](underlying.as(v.value))
-    inline def named[N1 <: Name](name: N1)(using v: ValueOf[N1]): TypedColumn[N1, T] = named[N1]
-    inline def name(using v: ValueOf[N]): N = v.value
+    inline def named[N1 <: Internals.Name](name: N1)(using v: ValueOf[N1]): TypedColumn[T] { type Name = N1 } =
+      TypedColumn[T](underlying.as(v.value)).asInstanceOf[TypedColumn[T] { type Name = N1 }]
 
-export TypedColumnOpaqueScope.*
+    private[typedframes] inline def namedAs[N1 <: Internals.Name](using v: ValueOf[N1]): TypedColumn[T] { type Name = N1 } =
+      TypedColumn[T](underlying.as(v.value)).asInstanceOf[TypedColumn[T] { type Name = N1 }]
+
+    inline def name(using v: ValueOf[Name]): Name = v.value
+
+export TypedColumnOpaqueScope.TypedColumn
+
+object NamedColumnOpaqueScope:
+  type NamedColumn[N <: Internals.Name, +T <: DataType] = TypedColumn[T] { type Name = N }
+
+  object NamedColumn:
+    def escapeColumnName(name: String) = s"`${name}`"
+
+export NamedColumnOpaqueScope.NamedColumn

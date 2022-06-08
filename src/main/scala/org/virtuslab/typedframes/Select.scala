@@ -1,22 +1,33 @@
 package org.virtuslab.typedframes
 
 import scala.quoted.*
-import org.apache.spark.sql.{ Column => UntypedColumn}
+import org.apache.spark.sql.{ Column => UntypedColumn, DataFrame => UntypedDataFrame }
 import types.{ DataType, StructType }
 import Internals.Name
 
 trait SelectCtx extends SparkOpCtx:
   type CtxOut <: SelectionView
 
-extension [S <: StructType](inline tdf: TypedDataFrame[S])(using svp: SelectionView.Provider[S])
-  inline def select[T](f: SelectCtx { type CtxOut = svp.View } ?=> T)(using mc: MergeColumns[T]): TypedDataFrame[mc.MergedSchema] =
-    val ctx: SelectCtx { type CtxOut = svp.View } = new SelectCtx {
-      type CtxOut = svp.View
-      def ctxOut: svp.View = svp.view
+extension [DF <: TypedDataFrame[?]](tdf: DF)
+  transparent inline def select: SelectOps[?] = ${ SelectOps.selectImpl[DF]('{tdf}) }
+
+class SelectOps[View <: SelectionView](view: View, underlying: UntypedDataFrame):
+  def apply[T](f: SelectCtx { type CtxOut = View } ?=> T)(using mc: MergeColumns[T]): TypedDataFrame[mc.MergedSchema] =
+    val ctx = new SelectCtx {
+      type CtxOut = View
+      def ctxOut: View = view
     }
     val typedCols = f(using ctx)
     val columns  = mc.columns(typedCols)
-    (tdf.untyped.select(columns*)).withSchema[mc.MergedSchema]
+    (underlying.select(columns*)).withSchema[mc.MergedSchema]
+
+object SelectOps:
+  def selectImpl[DF <: TypedDataFrame[?] : Type](tdf: Expr[DF])(using Quotes): Expr[SelectOps[?]] =
+    import quotes.reflect.*
+    val viewExpr = SelectionView.selectionViewExpr[DF]//(tdf)
+    viewExpr.asTerm.tpe.asType match
+      case '[v] =>
+        '{ SelectOps[v & SelectionView](${ viewExpr }.asInstanceOf[v & SelectionView], ${ tdf }.untyped) }
 
 trait MergeColumns[T]:
   type MergedSchema <: StructType

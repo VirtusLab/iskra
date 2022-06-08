@@ -6,21 +6,30 @@ import org.apache.spark.sql.functions.*
 
 import org.virtuslab.typedframes.{TypedColumn as Col}
 
-extension (col1: Col[IntegerType])
-  inline def +(col2: Col[IntegerType]): Col[IntegerType] = (col1.untyped + col2.untyped).typed[IntegerType]
-  inline def <(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped < col2.untyped).typed[BooleanType]
-  inline def <=(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped <= col2.untyped).typed[BooleanType]
-  inline def >(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped > col2.untyped).typed[BooleanType]
-  inline def >=(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped >= col2.untyped).typed[BooleanType]
+given integerColumnOps: {} with
+  extension (col1: Col[IntegerType])
+    inline def +(col2: Col[IntegerType]): Col[IntegerType] = (col1.untyped + col2.untyped).typed
+    inline def <(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped < col2.untyped).typed
+    inline def <=(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped <= col2.untyped).typed
+    inline def >(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped > col2.untyped).typed
+    inline def >=(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped >= col2.untyped).typed
+    inline def ===(col2: Col[IntegerType]): Col[BooleanType] = (col1.untyped === col2.untyped).typed
 
-extension (col1: Col[StringType])
-  inline def ++(col2: Col[StringType]): Col[StringType] = concat(col1.untyped, col2.untyped).typed[StringType]
+given stringColumnOps: {} with
+  extension (col1: Col[StringType])
+    inline def ++(col2: Col[StringType]): Col[StringType] = concat(col1.untyped, col2.untyped).typed[StringType]
+    inline def ===(col2: Col[StringType]): Col[BooleanType] = (col1.untyped === col2.untyped).typed[BooleanType]
 
-extension [A <: DataType](col1: Col[A])
-  inline def ===(col2: Col[A]): Col[BooleanType] = (col1.untyped === col2.untyped).typed[BooleanType]
+given stringLiteralColumnOps: {} with
+  extension (s: String)
+    def asColumn: Col[StringType] = lit(s).typed
 
+given integerLiteralColumnOps: {} with
+  extension (i: Int)
+    def asColumn: Col[IntegerType] = lit(i).typed
 
-extension (str: String)
-  def asColumn: TypedColumn[StringType] = TypedColumn[StringType](lit(str))
+given booleanLiteralColumnOps: {} with
+  extension (b: Boolean)
+    def asColumn: Col[BooleanType] = lit(b).typed
 
 // More operations can be added easily

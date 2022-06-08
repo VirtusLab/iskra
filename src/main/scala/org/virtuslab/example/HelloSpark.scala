@@ -26,7 +26,7 @@ case class Person(id: Int, name: Name)
 case class XXX(x1: Int, x2: String)
 case class YYY(y1: Int, y2: String)
 
-object HellSpark {
+object HelloSpark {
   def main(args: Array[String]): Unit = {
     implicit lazy val spark: SparkSession = {
       SparkSession
@@ -71,7 +71,7 @@ object HellSpark {
 
     println(afterSelect.collect[Baz1]())
 
-    // // afterSelect.select($.bc.named["bbb"]).show() // <- This won't compile
+    // afterSelect.select($.bc.named["bbb"]).show() // <- This won't compile
 
 
     val persons = Seq(
@@ -80,23 +80,38 @@ object HellSpark {
 
     persons.select($.name).show()
 
+
+    ///////
+
     // TODOs:
 
     // persons.select($.name.first).show()
 
-    val xs = Seq(XXX(1, "a"), XXX(2, "b")).toTypedDF
-    val ys = Seq(YYY(1, "A"), YYY(3, "C")).toTypedDF
+    ////////
 
-    xs.join(ys).on((x, y) => x.x1 === y.y1).show()
+    //foos.as("foos").select($.foos.b).show
 
-    // TODO: join with overlapping column names
+    // TODO:
+
+    val xs = Seq(XXX(1, "a"), XXX(2, "b"), XXX(3, "c")).toTypedDF
+    val ys = Seq(YYY(1, "A"), YYY(3, "C"), YYY(4, "D")).toTypedDF
+
+    xs.join.inner(ys).on($.x1 === $.y1).show()
 
     // val bars = Seq(
     //   Bar(1, "XXX"),
     //   Bar(2, "YYY")
     // ).toTypedDF
 
-    // val fooBars = foos.join(bars).on((f, b) => f.b === b.b).show()
+    ///////
+
+    // foos.as("foo").join(bars).on((f, b) => f.b === b.b).select($.foo.b).show()
+
+    // foos.select($.a.named("c"), $.b).join(bars).on((f, b) => f.b === b.b).show()
+
+    // TODO: selecting ambiguous columns
+
+    // foos.select($.a.named("c"), $.b).join(bars).on((f, b) => f.b === b.b).select($.c).show()
 
     spark.stop()
   }

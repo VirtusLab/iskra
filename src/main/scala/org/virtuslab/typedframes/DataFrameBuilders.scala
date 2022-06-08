@@ -5,11 +5,10 @@ import org.apache.spark.sql
 import org.apache.spark.sql.{ DataFrame => UntypedDataFrame, SparkSession }
 import types.{ DataType, StructType }
 import Internals.Name
-import TypedDataFrameOpaqueScope.*
 
 object TypedDataFrameBuilders:
   given primitiveTypeBuilderOps: {} with
-    extension [A <: Int | String](inline seq: Seq[A])(using typeEncoder: DataType.Encoder[A], spark: SparkSession) // TODO: Add more primitive types
+    extension [A <: Int | String](seq: Seq[A])(using typeEncoder: DataType.Encoder[A], spark: SparkSession) // TODO: Add more primitive types
       transparent inline def toTypedDF[N <: Name](name: N): TypedDataFrame[StructType] = ${toTypedDFWithNameImpl[N, A, typeEncoder.Encoded]('seq, 'spark)}
 
   private def toTypedDFWithNameImpl[N <: Name : Type, A : Type, E <: DataType : Type](using Quotes)(seq: Expr[Seq[A]], spark: Expr[SparkSession]): Expr[TypedDataFrame[StructType/* TableSchema */]] =
@@ -21,7 +20,7 @@ object TypedDataFrameBuilders:
     }
 
   given structTypeBuilderOps: {} with
-    extension [A](inline seq: Seq[A])(using typeEncoder: DataType.StructEncoder[A], runtimeEncoder: sql.Encoder[A], spark: SparkSession)
+    extension [A](seq: Seq[A])(using typeEncoder: DataType.StructEncoder[A], runtimeEncoder: sql.Encoder[A], spark: SparkSession)
       inline def toTypedDF: TypedDataFrame[typeEncoder.Encoded] =
         import spark.implicits.*
         seq.toDF(/* Should we explicitly pass columns here? */).typed

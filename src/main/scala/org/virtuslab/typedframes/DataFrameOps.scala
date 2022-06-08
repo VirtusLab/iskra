@@ -3,7 +3,7 @@ package org.virtuslab.typedframes
 import org.apache.spark.sql
 import types.{DataType, StructType}
 
-extension [S <: StructType](inline tdf: TypedDataFrame[S])
+extension [S <: StructType](tdf: TypedDataFrame[S])
   inline def show(): Unit = tdf.untyped.show()
 
   // TODO: check schema conformance instead of equality

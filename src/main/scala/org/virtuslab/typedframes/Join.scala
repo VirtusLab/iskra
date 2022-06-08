@@ -1,6 +1,5 @@
 package org.virtuslab.typedframes
 
-// import scala.quoted.*
 import Internals.Name
 import org.virtuslab.typedframes.types.StructType
 
@@ -11,34 +10,20 @@ enum JoinType:
   case Outer
   // TODO: Add other join types (treating Cross join separately?)
 
-/* abstract */ class JoinOps[S1 <: StructType](leftFrame: TypedDataFrame[S1]):
-  // type SelectionViewLeft <: SelectionView
-  // type AllColumnsLeft <: Tuple
-  // val leftView: SelectionViewLeft
+class JoinSemiOps[DF1 <: TypedDataFrame[?]](leftFrame: DF1) extends AnyVal:
+  def apply[DF2 <: TypedDataFrame[?]](rightFrame: DF2, joinType: JoinType = JoinType.Inner) =
+    new JoinOps(leftFrame, rightFrame, joinType)
 
-  def apply[S2 <: StructType](rightFrame: TypedDataFrame[S2], joinType: JoinType = JoinType.Inner)(using svp1: SelectionView.Provider[S1], svp2: SelectionView.Provider[S2]) =
-    new ConditionalJoiner(leftFrame, rightFrame, joinType) {
-      // type SelectionViewLeft = JoinOps.this.SelectionViewLeft
-      type SelectionViewLeft = svp1.View
-      type SelectionViewRight = svp2.View
-      // type AllColumnsLeft = JoinOps.this.AllColumnsLeft
-      type AllColumnsLeft = svp1.view.AllColumns
-      type AllColumnsRight = svp2.view.AllColumns
-      // val leftView: SelectionViewLeft = JoinOps.this.leftView
-      val leftView: SelectionViewLeft = svp1.view
-      val rightView: SelectionViewRight = svp2.view
-    }
-  // def inner[S2 <: StructType](rightFrame: TypedDataFrame[S2])(using svp2: SelectionView.Provider[S2]) = ConditionalJoiner(leftFrame, rightFrame, JoinType.Inner)
-  // def left[S2 <: StructType](rightFrame: TypedDataFrame[S2])(using SelectionView.Provider[S2]) = ConditionalJoiner(leftFrame, rightFrame, JoinType.Left)
-  // def right[S2 <: StructType](rightFrame: TypedDataFrame[S2])(using SelectionView.Provider[S2]) = ConditionalJoiner(leftFrame, rightFrame, JoinType.Right)
-  // def outer[S2 <: StructType](rightFrame: TypedDataFrame[S2])(using SelectionView.Provider[S2]) = ConditionalJoiner(leftFrame, rightFrame, JoinType.Outer)
+  def inner[DF2 <: TypedDataFrame[?]](rightFrame: DF2) = apply(rightFrame, JoinType.Inner)
+  def left[DF2 <: TypedDataFrame[?]](rightFrame: DF2) = apply(rightFrame, JoinType.Left)
+  def right[DF2 <: TypedDataFrame[?]](rightFrame: DF2) = apply(rightFrame, JoinType.Right)
+  def outer[DF2 <: TypedDataFrame[?]](rightFrame: DF2) = apply(rightFrame, JoinType.Outer)
 
-extension [S <: StructType](inline tdf: TypedDataFrame[S])
-  inline def join/* (using svp: SelectionView.Provider[S]) */ = new JoinOps(tdf) {
-    // type SelectionViewLeft = svp.View
-    // type AllColumnsLeft = svp.view.AllColumns
-    // val leftView = svp.view
-  }
+class JoinOps[DF1 <: TypedDataFrame[?], DF2 <: TypedDataFrame[?]](left: DF1, right: DF2, joinType: JoinType):
+  transparent inline def on = ${ ConditionalJoiner.make[DF1, DF2]('left, 'right, 'joinType) }
+
+extension [S <: StructType](/* inline */ tdf: TypedDataFrame[S])
+  inline def join = new JoinSemiOps(tdf)
 
 
 

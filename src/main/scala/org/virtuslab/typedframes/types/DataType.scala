@@ -91,3 +91,8 @@ object StructType:
     case EmptyTuple => StructType.SNil
 
   type WithSingleColumn[N <: Name, ColType <: DataType] = FromLabelsAndTypes[N *: EmptyTuple, ColType *: EmptyTuple]
+
+  type Merge[S1 <: StructType, S2 <: StructType] =
+    S1 match
+      case SNil => S2
+      case SCons[headName, headType, tail] => SCons[headName, headType, Merge[tail, S2]]

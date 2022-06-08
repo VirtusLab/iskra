@@ -37,4 +37,4 @@ trait SparkOpCtx:
       also worked but this wouldn't be very useful if df1 or df2 weren't assigned to variables or had very long names
 */
 
-transparent inline def $(using inline ctx: SparkOpCtx): ctx.CtxOut = ctx.ctxOut
+transparent inline def $(using ctx: SparkOpCtx): ctx.CtxOut = ctx.ctxOut

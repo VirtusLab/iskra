@@ -38,7 +38,7 @@ object MergeColumns:
       type s = StructType.FromLabelsAndTypes[ColumnsNames[T], ColumnsTypes[T]]
       new MergeColumns[T] {
         type MergedSchema = s
-        def columns(t: T): List[UntypedColumn] = t.toList.map(col => col.asInstanceOf[TypedColumn[DataType]].underlying)
+        def columns(t: T): List[UntypedColumn] = t.toList.map(col => col.asInstanceOf[TypedColumn[DataType]].untyped)
       }.asInstanceOf[MergeColumns[T] {type MergedSchema = s}]
     }
 
@@ -50,6 +50,6 @@ object MergeColumns:
       type s = StructType.WithSingleColumn[N, A]
       new MergeColumns[NamedColumn[N, A]] {
         type MergedSchema = s
-        def columns(t: NamedColumn[N, A]): List[UntypedColumn] = List(t.underlying)
+        def columns(t: NamedColumn[N, A]): List[UntypedColumn] = List(t.untyped)
       }.asInstanceOf[MergeColumns[NamedColumn[N, A]] {type MergedSchema = s}]
     }

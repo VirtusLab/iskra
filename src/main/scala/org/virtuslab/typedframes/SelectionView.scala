@@ -14,7 +14,7 @@ object SelectionView:
 
   trait Provider[A <: StructType]:
     type View <: SelectionView
-    def view: View
+    val view: View
 
   object Provider:
     transparent inline given selectionViewFor[A <: StructType]: Provider[A] = ${ selectionViewForImpl[A] }
@@ -31,7 +31,7 @@ object SelectionView:
             }
             new SelectionView.Provider[A] {
               type View = t
-              def view = v.asInstanceOf[t]
+              val view = v.asInstanceOf[t]
             }: SelectionView.Provider[A] { type View = t }
           }
 

@@ -12,8 +12,8 @@ import org.virtuslab.typedframes.types.{DataType, StructType}
 
 case class JustInt(int: Int)
 
-case class Foo(a: String, b: Int, bb: Int)
-case class Bar(b: Int, bb: Int, c: String)
+case class Foo(a: String, b: Int)
+case class Bar(b: Int, c: String)
 
 case class FooBar(a: String, b: Int, c: String)
 
@@ -22,6 +22,9 @@ case class Baz2(str: String, i: Int)
 
 case class Name(first: String, last: String)
 case class Person(id: Int, name: Name)
+
+case class XXX(x1: Int, x2: String)
+case class YYY(y1: Int, y2: String)
 
 object HellSpark {
   def main(args: Array[String]): Unit = {
@@ -51,8 +54,8 @@ object HellSpark {
     strings.select($.ab, $.ab.named("abcde")).select($.abcde).show()
 
     val foos = Seq(
-      Foo("aaaa", 1, 10),
-      Foo("bbbb", 2, 20)
+      Foo("aaaa", 1),
+      Foo("bbbb", 2)
     ).toTypedDF
 
     foos.show()
@@ -80,6 +83,20 @@ object HellSpark {
     // TODOs:
 
     // persons.select($.name.first).show()
+
+    val xs = Seq(XXX(1, "a"), XXX(2, "b")).toTypedDF
+    val ys = Seq(YYY(1, "A"), YYY(3, "C")).toTypedDF
+
+    xs.join(ys).on((x, y) => x.x1 === y.y1).show()
+
+    // TODO: join with overlapping column names
+
+    // val bars = Seq(
+    //   Bar(1, "XXX"),
+    //   Bar(2, "YYY")
+    // ).toTypedDF
+
+    // val fooBars = foos.join(bars).on((f, b) => f.b === b.b).show()
 
     spark.stop()
   }

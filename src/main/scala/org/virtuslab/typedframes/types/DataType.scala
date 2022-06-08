@@ -72,6 +72,7 @@ object DataType:
 
 trait IntegerType extends DataType
 trait StringType extends DataType
+trait BooleanType extends DataType
 
 sealed trait StructType extends DataType
 object StructType:

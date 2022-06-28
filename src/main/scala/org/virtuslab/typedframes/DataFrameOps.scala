@@ -3,9 +3,9 @@ package org.virtuslab.typedframes
 import org.apache.spark.sql
 import types.{DataType, StructType}
 
-extension [S <: StructType](tdf: TypedDataFrame[S])
+extension [S <: FrameSchema](tdf: TypedDataFrame[S])
   inline def show(): Unit = tdf.untyped.show()
 
   // TODO: check schema conformance instead of equality
-  inline def collect[A]()(using typeEncoder: DataType.StructEncoder[A], runtimeEncoder: sql.Encoder[A], eq: typeEncoder.Encoded =:= S): List[A] =
+  inline def collect[A]()(using typeEncoder: FrameSchema.Encoder[A], runtimeEncoder: sql.Encoder[A], eq: typeEncoder.Encoded =:= S): List[A] =
     tdf.untyped.as[A].collect.toList

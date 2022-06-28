@@ -17,8 +17,8 @@ given integerColumnOps: {} with
 
 given stringColumnOps: {} with
   extension (col1: Col[StringType])
-    inline def ++(col2: Col[StringType]): Col[StringType] = concat(col1.untyped, col2.untyped).typed[StringType]
-    inline def ===(col2: Col[StringType]): Col[BooleanType] = (col1.untyped === col2.untyped).typed[BooleanType]
+    inline def ++(col2: Col[StringType]): Col[StringType] = concat(col1.untyped, col2.untyped).typed
+    inline def ===(col2: Col[StringType]): Col[BooleanType] = (col1.untyped === col2.untyped).typed
 
 given stringLiteralColumnOps: {} with
   extension (s: String)

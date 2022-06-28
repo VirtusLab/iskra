@@ -1,7 +1,10 @@
 package org.virtuslab.typedframes
 
+import scala.quoted.*
+
 import Internals.Name
 import org.virtuslab.typedframes.types.StructType
+import org.apache.spark.sql.{ DataFrame => UntypedDataFrame }
 
 enum JoinType:
   case Inner
@@ -10,64 +13,29 @@ enum JoinType:
   case Outer
   // TODO: Add other join types (treating Cross join separately?)
 
-class JoinSemiOps[DF1 <: TypedDataFrame[?]](leftFrame: DF1) extends AnyVal:
-  def apply[DF2 <: TypedDataFrame[?]](rightFrame: DF2, joinType: JoinType = JoinType.Inner) =
-    new JoinOps(leftFrame, rightFrame, joinType)
-
-  def inner[DF2 <: TypedDataFrame[?]](rightFrame: DF2) = apply(rightFrame, JoinType.Inner)
-  def left[DF2 <: TypedDataFrame[?]](rightFrame: DF2) = apply(rightFrame, JoinType.Left)
-  def right[DF2 <: TypedDataFrame[?]](rightFrame: DF2) = apply(rightFrame, JoinType.Right)
-  def outer[DF2 <: TypedDataFrame[?]](rightFrame: DF2) = apply(rightFrame, JoinType.Outer)
-
-class JoinOps[DF1 <: TypedDataFrame[?], DF2 <: TypedDataFrame[?]](left: DF1, right: DF2, joinType: JoinType):
+class JoinOps[DF1 <: TypedDataFrame[FrameSchema], DF2 <: TypedDataFrame[FrameSchema]](left: UntypedDataFrame, right: UntypedDataFrame, joinType: JoinType):
   transparent inline def on = ${ ConditionalJoiner.make[DF1, DF2]('left, 'right, 'joinType) }
 
-extension [S <: StructType](/* inline */ tdf: TypedDataFrame[S])
-  inline def join = new JoinSemiOps(tdf)
+extension [DF1 <: TypedDataFrame[FrameSchema], DF2 <: TypedDataFrame[FrameSchema]](inline df1: DF1)
+  transparent inline def join(inline df2: DF2) = ${ joinImpl('{df1}, '{df2}, '{JoinType.Inner}) }
+  transparent inline def innerJoin(inline df2: DF2) = ${ joinImpl('{df1}, '{df2}, '{JoinType.Inner}) }
+  transparent inline def leftJoin(inline df2: DF2) = ${ joinImpl('{df1}, '{df2}, '{JoinType.Left}) }
+  transparent inline def rightJoin(inline df2: DF2) = ${ joinImpl('{df1}, '{df2}, '{JoinType.Right}) }
+  transparent inline def outerJoin(inline df2: DF2) = ${ joinImpl('{df1}, '{df2}, '{JoinType.Outer}) }
 
+def joinImpl[DF1 <: TypedDataFrame[FrameSchema] : Type, DF2 <: TypedDataFrame[FrameSchema] : Type](using Quotes)(
+  df1: Expr[DF1], df2: Expr[DF2], joinType: Expr[JoinType]
+) = 
+  import quotes.reflect.*
 
-
-// class Joiner[S1 <: StructType, S2 <: StructType](left: TypedDataFrame[S1], right: TypedDataFrame[S2])
-
-// extension [S1 <: StructType, S2 <: StructType](joiner: Joiner[S1, S2])(jvp: JoinView.Provider[S1, S2])
-//   def on[T](f: JoinCtx { type CtxOut = svp.View } ?=> T)
-
-
-// // trait SharedColumnsJoinCtx extends SparkOpCtx:
-// //   type CtxOut <: TableSchema
-
-// // extension [S <: TableSchema](inline tdf: TypedDataFrame[S])
-// //     inline def join[S2 <: TableSchema](inline tdf2: TypedDataFrame[S2]) = new JoinOps(tdf, tdf2)
-
-// // trait CommonColumns[S1 <: TableSchema, S2 <: TableSchema]:
-// //   type Schema <: TableSchema
-
-// // trait JoinSchemas[S1 <: TableSchema, S2 <: TableSchema, Columns]:
-// //   type JoinedSchema <: TableSchema
-// //   val usingColumns: Seq[String]
-
-// // class JoinOps[S1 <: TableSchema, S2 <: TableSchema](df1: TypedDataFrame[S1], df2: TypedDataFrame[S2]): // TODO use opaque type?
-// //   // join on single column
-// //   inline def on[Columns](using cc: CommonColumns[S1, S2])(f: SharedColumnsJoinCtx { type CtxOut = cc.Schema } ?=> Columns)(using js: JoinSchemas[S1, S2, Columns]): TypedDataFrame[js.JoinedSchema] = 
-// //     val ctx: SharedColumnsJoinCtx { type CtxOut = S1 & S2 } = new SharedColumnsJoinCtx {
-// //       type CtxOut = S1 & S2
-// //       def ctxOut: CtxOut = TableSchema().asInstanceOf[CtxOut]
-// //     }
-
-// //     df1.untyped.join(df2.untyped, js.usingColumns).withSchema[js.JoinedSchema]
-
-
-
-
-
-
-// /////////////////////////
-
-
-// // transparent inline given commonColumns[S1 <: TableSchema, S2 <: TableSchema]: CommonColumns[S1, S2] = ${ commonColumnsImpl[S1, S2] }
-
-// //def commonColumnsImpl[S1 <: TableSchema : Type, S2 <: TableSchema : Type](using Quotes): Expr[CommonColumns[S1, S2]] = 
-  
-
-// // given [S1 <: TableSchema, S2 <: TableSchema, ColName <: Name]: JoinSchemas[S1, S2, ColName] with
-// //   type JoinedSchema = 
+  TypedDataFrame.autoAliasTypeImpl(df1).asType match
+    case '[TypedDataFrame.Subtype[dft1]] =>
+      TypedDataFrame.autoAliasTypeImpl(df2).asType match
+        case '[TypedDataFrame.Subtype[dft2]] =>
+          '{
+            new JoinOps[dft1, dft2](
+              ${ TypedDataFrame.autoAliasImpl[DF1](df1) },
+              ${ TypedDataFrame.autoAliasImpl[DF2](df2) },
+              ${ joinType }
+            )
+          }

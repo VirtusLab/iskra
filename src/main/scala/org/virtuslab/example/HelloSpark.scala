@@ -9,19 +9,22 @@ import scala3encoders.given
 
 import org.apache.spark.sql.SparkSession
 import org.virtuslab.typedframes.types.{DataType, StructType}
+import org.virtuslab.typedframes.types.IntegerType
+import org.virtuslab.typedframes.types.StringType
 
 case class JustInt(int: Int)
 
 case class Foo(a: String, b: Int)
 case class Bar(b: Int, c: String)
+case class Nif(c: String, d: Int)
 
 case class FooBar(a: String, b: Int, c: String)
 
 case class Baz1(i: Int, str: String)
 case class Baz2(str: String, i: Int)
 
-case class Name(first: String, last: String)
-case class Person(id: Int, name: Name)
+case class PersonName(first: String, last: String)
+case class Person(id: Int, name: PersonName)
 
 case class XXX(x1: Int, x2: String)
 case class YYY(y1: Int, y2: String)
@@ -63,7 +66,7 @@ object HelloSpark {
     foos.select($.b.named("b1")).show()
     foos.select(($.b + $.b).named("b2")).show()
     foos.select($.b, $.b).show()
-    foos.select($.*).show()
+    // foos.select($.*).show()
 
     val afterSelect = foos.select(($.b + $.b).named("i"), $.a.named("str"))
 
@@ -71,11 +74,10 @@ object HelloSpark {
 
     println(afterSelect.collect[Baz1]())
 
-    // afterSelect.select($.bc.named["bbb"]).show() // <- This won't compile
-
+    // // afterSelect.select($.bc.named["bbb"]).show() // <- This won't compile
 
     val persons = Seq(
-      Person(1, Name("William", "Shakespeare"))
+      Person(1, PersonName("William", "Shakespeare"))
     ).toTypedDF
 
     persons.select($.name).show()
@@ -89,29 +91,26 @@ object HelloSpark {
 
     ////////
 
-    //foos.as("foos").select($.foos.b).show
+    val bars = Seq(
+      Bar(1, "XXX"),
+      Bar(2, "YYY")
+    ).toTypedDF
 
-    // TODO:
+    foos.as("foos").join(bars.as("bars")).on($.foos.b === $.bars.b).select($.a, $.bars.b, $.c).show()
+    foos.join(bars).on($.foos.b === $.bars.b).select($.a, $.bars.b, $.c).show()
+    
+    val fooos = foos.as("fooos")
+    val baars = bars.as("baars")
 
-    val xs = Seq(XXX(1, "a"), XXX(2, "b"), XXX(3, "c")).toTypedDF
-    val ys = Seq(YYY(1, "A"), YYY(3, "C"), YYY(4, "D")).toTypedDF
+    fooos.join(baars).on($.fooos.b === $.baars.b).select($.a, $.baars.b, $.c).show()
 
-    xs.join.inner(ys).on($.x1 === $.y1).show()
 
-    // val bars = Seq(
-    //   Bar(1, "XXX"),
-    //   Bar(2, "YYY")
-    // ).toTypedDF
+    val nifs = Seq(Nif("XXX", -1), Nif("YYY", -2)).toTypedDF
 
-    ///////
-
-    // foos.as("foo").join(bars).on((f, b) => f.b === b.b).select($.foo.b).show()
-
-    // foos.select($.a.named("c"), $.b).join(bars).on((f, b) => f.b === b.b).show()
-
-    // TODO: selecting ambiguous columns
-
-    // foos.select($.a.named("c"), $.b).join(bars).on((f, b) => f.b === b.b).select($.c).show()
+    foos
+      .join(bars).on($.foos.b === $.bars.b)
+      .join(nifs).on($.bars.c === $.nifs.c)
+      .show()
 
     spark.stop()
   }

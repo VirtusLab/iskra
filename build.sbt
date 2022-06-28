@@ -1,5 +1,4 @@
-// ThisBuild / scalaVersion := "3.1.2"
-ThisBuild / scalaVersion := "3.2.0-RC1-bin-20220611-0260d75-NIGHTLY" // experimental code completions
+ThisBuild / scalaVersion := "3.2.0-RC1"
 
 val sparkVersion = "3.2.0"
 
@@ -13,5 +12,6 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       sparkCore, sparkSql, sparkScala3
     ),
+    //scalacOptions ++= Seq("-explain") 
     //run / fork := true
   )

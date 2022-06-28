@@ -5,36 +5,43 @@ import scala.quoted.*
 import types.{DataType, StructType}
 import Internals.Name
 
-// object TypedDataFrameOpaqueScope:
-//   opaque type TypedDataFrame[+S <: StructType] = UntypedDataFrame
-//   extension (inline df: UntypedDataFrame)
-//     inline def typed[A](using encoder: DataType.StructEncoder[A]): TypedDataFrame[encoder.Encoded] = df // TODO: Check schema at runtime? Check if names of columns match?
-//     inline def withSchema[S <: StructType]: TypedDataFrame[S] = df // TODO? make it private[typedframes]
-
-//   extension [S <: StructType](tdf: TypedDataFrame[S])
-//     inline def untyped: UntypedDataFrame = tdf
-
-// export TypedDataFrameOpaqueScope.*
-
-class TypedDataFrame[+S <: StructType](val untyped: UntypedDataFrame) /* extends AnyVal */:
+class TypedDataFrame[+S <: FrameSchema](val untyped: UntypedDataFrame) /* extends AnyVal */:
   type Alias <: Name
 
-  inline def as[N <: Name](inline name: N) = this.asInstanceOf[TypedDataFrame[S] { type Alias = N }]
-
 object TypedDataFrame:
-  transparent inline def autoAlias[DF <: TypedDataFrame[?]](inline df: DF) = ${ TypedDataFrame.autoAliasImpl[DF]('{ df }) }
+  type Subtype[T <: TypedDataFrame[FrameSchema]] = T
+  type WithAlias[T <: String & Singleton] = TypedDataFrame[?] { type Alias = T }
 
-  def autoAliasImpl[DF <: TypedDataFrame[?] : Type](df: Expr[DF])(using Quotes): Expr[TypedDataFrame[?]] =
+  extension [S <: FrameSchema](tdf: TypedDataFrame[S])
+    inline def as[N <: Name](inline name: N)(using v: ValueOf[N]) =
+      new TypedDataFrame[FrameSchema.Reowned[S, N]](tdf.untyped.alias(v.value)):
+        type Alias = N
+  
+  def autoAliasTypeImpl[DF <: TypedDataFrame[FrameSchema] : Type](df: Expr[DF])(using Quotes): quotes.reflect.TypeRepr =
     import quotes.reflect.*
     df.asTerm match
       case Inlined(_, _, Ident(name)) =>
-        ConstantType(StringConstant(name)).asType match
-          case '[t] => '{ ${ df }.asInstanceOf[DF { type Alias = t }] }
-      case _ => df
+        Type.of[DF] match
+          case '[TypedDataFrame.WithAlias[alias]] => 
+            TypeRepr.of[DF]
+          case '[TypedDataFrame[schema]] =>
+            ConstantType(StringConstant(name)).asType match
+              case '[Name.Subtype[n]] => TypeRepr.of[TypedDataFrame[FrameSchema.Reowned[schema, n]] { type Alias = n }]
+      case _ => TypeRepr.of[DF]
 
-  type Aux[+S <: StructType, A <: Name] = TypedDataFrame[StructType] { type Alias = A }
+  def autoAliasImpl[DF <: TypedDataFrame[FrameSchema] : Type](df: Expr[DF])(using Quotes): Expr[UntypedDataFrame] =
+    import quotes.reflect.*
+    df.asTerm match
+      case Inlined(_, _, Ident(name)) =>
+        Type.of[DF] match
+          case '[TypedDataFrame.WithAlias[alias]] =>
+            '{ ${df}.untyped }
+          case _ =>
+            val nameExpr = Expr(name)
+            '{ ${df}.untyped.as(${nameExpr}) }
+      case _ => '{ ${df}.untyped }
 
 given untypedDataFrameOps: {} with
   extension (df: UntypedDataFrame)
-    inline def typed[A](using encoder: DataType.StructEncoder[A]): TypedDataFrame[encoder.Encoded] = TypedDataFrame(df) // TODO: Check schema at runtime? Check if names of columns match?
-    inline def withSchema[S <: StructType]: TypedDataFrame[S] = TypedDataFrame(df) // TODO? make it private[typedframes]
+    inline def typed[A](using encoder: FrameSchema.Encoder[A]): TypedDataFrame[encoder.Encoded] = TypedDataFrame(df) // TODO: Check schema at runtime? Check if names of columns match?
+    inline def withSchema[S <: FrameSchema]: TypedDataFrame[S] = TypedDataFrame(df) // TODO? make it private[typedframes]

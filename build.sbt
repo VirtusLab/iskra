@@ -12,6 +12,6 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       sparkCore, sparkSql, sparkScala3
     ),
-    //scalacOptions ++= Seq("-explain") 
+    // scalacOptions ++= Seq("-explain") 
     //run / fork := true
   )

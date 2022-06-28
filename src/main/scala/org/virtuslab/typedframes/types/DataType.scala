@@ -2,8 +2,7 @@ package org.virtuslab.typedframes.types
 
 import scala.quoted._
 import scala.deriving.Mirror
-import scala.compiletime.{erasedValue, summonInline}
-import org.virtuslab.typedframes.Internals.Name
+import org.virtuslab.typedframes.Name
 
 trait DataType
 
@@ -37,7 +36,7 @@ object DataType:
         case '[EmptyTuple] => TypeRepr.of[StructType.SNil]
         case '[Name.Subtype[label] *: labels] => mirroredElemTypes match
           case '[tpe *: tpes] =>
-            Expr.summon[Encoder[tpe]].getOrElse(fromMirrorImpl[tpe]) match // TODO: tpe might also be an unhandled primitive
+            Expr.summon[Encoder[tpe]].getOrElse(fromMirrorImpl[tpe]) match
               case '{ ${encoder}: Encoder.Aux[tpe, DataType.Subtype[e]] } => 
                 getEncodedType(Type.of[labels], Type.of[tpes]).asType match
                   case '[StructType.Subtype[tail]] =>
@@ -56,20 +55,3 @@ object DataType:
               override type Encoded = t
             }): StructEncoder[A] { type Encoded = t }
           }
-
-trait IntegerType extends DataType
-trait StringType extends DataType
-trait BooleanType extends DataType
-
-sealed trait StructType extends DataType
-object StructType:
-  object SNil extends StructType
-  type SNil = SNil.type
-  final case class SCons[N <: Name, H <: DataType, T <: StructType](headLabel: N, headTypeName: String, tail: T) extends StructType//:
-
-  type Subtype[T <: StructType] = T
-
-  type Merge[S1 <: StructType, S2 <: StructType] =
-    S1 match
-      case SNil => S2
-      case SCons[headName, headType, tail] => SCons[headName, headType, Merge[tail, S2]]

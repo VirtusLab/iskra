@@ -4,7 +4,6 @@ import scala.quoted.*
 import scala.deriving.Mirror
 import types.DataType
 import types.{IntegerType, BooleanType, StringType}
-import Internals.Name
 
 type FrameSchema = Tuple
 
@@ -24,7 +23,7 @@ object FrameSchema:
     type Encoded <: FrameSchema
 
   object Encoder:
-    type TupleSubtype[T <: Tuple] = T // TODO: Needed or not?
+    type TupleSubtype[T <: Tuple] = T
 
     def getEncodedType(using quotes: Quotes)(mirroredElemLabels: Type[?], mirroredElemTypes: Type[?]): quotes.reflect.TypeRepr =
       import quotes.reflect.*
@@ -34,7 +33,7 @@ object FrameSchema:
         case '[Name.Subtype[label] *: labels] => mirroredElemTypes match
           case '[tpe *: tpes] =>
             // TODO: Handle missing encoder
-            Expr.summon[DataType.Encoder[tpe]].get /* getOrElse(DataType.Encoder.fromMirrorImpl[tpe]) */ match // TODO: tpe might also be an unhandled primitive
+            Expr.summon[DataType.Encoder[tpe]].get match
               case '{ $encoder: DataType.Encoder.Aux[tpe, DataType.Subtype[e]] } => 
                 getEncodedType(Type.of[labels], Type.of[tpes]).asType match
                   case '[TupleSubtype[tail]] =>
@@ -43,7 +42,7 @@ object FrameSchema:
     transparent inline given fromMirror[A](using m: Mirror.ProductOf[A]): Encoder[A] = ${ fromMirrorImpl[A] }
 
     def fromMirrorImpl[A : Type](using Quotes): Expr[Encoder[A]] =
-      val encodedType = Expr.summon[Mirror.Of[A]].getOrElse(throw new Exception(s"aaaaa ${Type.show[A]}")) match
+      val encodedType = Expr.summon[Mirror.Of[A]].getOrElse(throw new Exception(s"Could not find Mirror when generating encoder for ${Type.show[A]}")) match
         case '{ $m: Mirror.ProductOf[A] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes } } =>
           getEncodedType(Type.of[elementLabels], Type.of[elementTypes])
       encodedType.asType match

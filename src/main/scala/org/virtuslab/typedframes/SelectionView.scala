@@ -4,7 +4,6 @@ import scala.quoted._
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame => UntypedDataFrame}
 import types.{DataType, StructType}
-import Internals.Name
 
 trait SelectionView extends Selectable:
   def frameAliases: Seq[String] // TODO: get rid of this in runtime
@@ -16,7 +15,7 @@ trait SelectionView extends Selectable:
   def selectDynamic(name: String): AliasedSelectionView | LabeledColumn[?, ?] =
     if frameAliases.contains(name)
       then AliasedSelectionView(name)
-      else LabeledColumn(col(LabeledColumn.escapeColumnName(name)))
+      else LabeledColumn(col(Name.escape(name)))
 
 object SelectionView:
   type Subtype[T <: SelectionView] = T
@@ -31,7 +30,7 @@ object SelectionView:
   //       headLabel1 match
   //         case '[Name.Subtype[name]] => // TODO: handle frame prefixes
   //           val label = Expr(Type.valueOfConstant[name].get.toString)
-  //           '{ TypedColumn[Nothing](col(LabeledColumn.escapeColumnName(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
+  //           '{ TypedColumn[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
 
   private def refineType(using Quotes)(base: quotes.reflect.TypeRepr, refinements: List[(String, quotes.reflect.TypeRepr)]): quotes.reflect.TypeRepr =
     import quotes.reflect.*
@@ -55,12 +54,10 @@ object SelectionView:
         val newBase = Refinement(base, name, info)
         selectionViewType(newBase, Type.of[tail])
 
-  type TupleSubtype[T <: Tuple] = T // TODO: Needed or not?
-
-  def selectionViewExpr[DF <: TypedDataFrame[?] : Type](using Quotes): Expr[SelectionView] =
+  def selectionViewExpr[DF <: DataFrame[?] : Type](using Quotes): Expr[SelectionView] =
     import quotes.reflect.*
     Type.of[DF] match
-      case '[TypedDataFrame[schema]] =>
+      case '[DataFrame[schema]] =>
         val schemaType = Type.of[schema]
         val aliasViewsByName = frameAliasViewsByName(schemaType)
         val columns = unambiguousColumns(schemaType)    
@@ -116,5 +113,5 @@ object SelectionView:
         namedColumn :: allColumns(Type.of[tail])
 class AliasedSelectionView(frameAliasName: String) extends Selectable:
   def selectDynamic(name: String): LabeledColumn[Name, DataType] =
-    val columnName = s"${LabeledColumn.escapeColumnName(frameAliasName)}.${LabeledColumn.escapeColumnName(name)}"
+    val columnName = s"${Name.escape(frameAliasName)}.${Name.escape(name)}"
     LabeledColumn[Name, DataType](col(columnName))

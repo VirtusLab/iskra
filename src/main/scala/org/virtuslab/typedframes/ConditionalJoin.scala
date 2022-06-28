@@ -4,13 +4,13 @@ import scala.quoted.*
 import org.virtuslab.typedframes.types.{BooleanType, StructType}
 import org.apache.spark.sql.{DataFrame => UntypedDataFrame}
 
-abstract class ConditionalJoiner[DF1 <: TypedDataFrame[?], DF2 <: TypedDataFrame[?]](
+abstract class ConditionalJoiner[DF1 <: DataFrame[?], DF2 <: DataFrame[?]](
   left: UntypedDataFrame, right: UntypedDataFrame, joinType: JoinType
 ):
   type MergedSchema <: FrameSchema
   type MergedView <: SelectionView
   val mergedView: MergedView
-  def apply(f: SelectCtx { type CtxOut = MergedView } ?=> TypedColumn[BooleanType]): TypedDataFrame[MergedSchema] =
+  def apply(f: SelectCtx { type CtxOut = MergedView } ?=> TypedColumn[BooleanType]): DataFrame[MergedSchema] =
     val ctx = new SelectCtx {
       type CtxOut = MergedView
       def ctxOut: MergedView = mergedView
@@ -23,16 +23,17 @@ abstract class ConditionalJoiner[DF1 <: TypedDataFrame[?], DF2 <: TypedDataFrame
       case JoinType.Right => "right"
       case JoinType.Outer => "outer"
 
-    left.join(right, condition, sparkJoinType).withSchema[MergedSchema]
+    val joined = left.join(right, condition, sparkJoinType)
+    DataFrame[MergedSchema](joined)
 
 object ConditionalJoiner:
-  def make[DF1 <: TypedDataFrame[?] : Type, DF2 <: TypedDataFrame[?] : Type](
+  def make[DF1 <: DataFrame[?] : Type, DF2 <: DataFrame[?] : Type](
     left: Expr[UntypedDataFrame], right: Expr[UntypedDataFrame], joinType: Expr[JoinType]
   )(using Quotes): Expr[ConditionalJoiner[DF1, DF2]] =
     import quotes.reflect.*
     mergeSchemaTypes(Type.of[DF1], Type.of[DF2]) match
       case '[FrameSchema.Subtype[s]] =>
-        val viewExpr = SelectionView.selectionViewExpr[TypedDataFrame[s]]
+        val viewExpr = SelectionView.selectionViewExpr[DataFrame[s]]
         viewExpr.asTerm.tpe.asType match
           case '[SelectionView.Subtype[v]] =>
             '{
@@ -45,7 +46,7 @@ object ConditionalJoiner:
 
   def mergeSchemaTypes(df1: Type[?], df2: Type[?])(using Quotes): Type[?] =
     df1 match
-      case '[TypedDataFrame[s1]] =>
+      case '[DataFrame[s1]] =>
         df2 match
-          case '[TypedDataFrame[s2]] =>
+          case '[DataFrame[s2]] =>
             Type.of[FrameSchema.Merge[s1, s2]]

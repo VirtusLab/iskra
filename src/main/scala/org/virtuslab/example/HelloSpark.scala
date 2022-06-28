@@ -8,9 +8,6 @@ package org.virtuslab.example
 import scala3encoders.given
 
 import org.apache.spark.sql.SparkSession
-import org.virtuslab.typedframes.types.{DataType, StructType}
-import org.virtuslab.typedframes.types.IntegerType
-import org.virtuslab.typedframes.types.StringType
 
 case class JustInt(int: Int)
 
@@ -20,11 +17,11 @@ case class Nif(c: String, d: Int)
 
 case class FooBar(a: String, b: Int, c: String)
 
-case class Baz1(i: Int, str: String)
-case class Baz2(str: String, i: Int)
+case class Baz(i: Int, str: String)
 
 case class PersonName(first: String, last: String)
 case class Person(id: Int, name: PersonName)
+case class FlatPerson(id: Int, firstName: String, lastName: String)
 
 case class XXX(x1: Int, x2: String)
 case class YYY(y1: Int, y2: String)
@@ -41,7 +38,8 @@ object HelloSpark {
 
     import spark.implicits._
 
-    import org.virtuslab.typedframes.{*, given}
+    import org.virtuslab.typedframes.api.{*, given}
+    import org.virtuslab.typedframes.functions.lit
     
     val untypedInts = Seq(1, 2, 3, 4).toDF("int")
     untypedInts.show()
@@ -54,8 +52,6 @@ object HelloSpark {
     val strings = Seq("abc", "def").toTypedDF("ab")
     strings.show()
 
-    strings.select($.ab, $.ab.named("abcde")).select($.abcde).show()
-
     val foos = Seq(
       Foo("aaaa", 1),
       Foo("bbbb", 2)
@@ -63,18 +59,16 @@ object HelloSpark {
 
     foos.show()
 
-    foos.select($.b.named("b1")).show()
-    foos.select(($.b + $.b).named("b2")).show()
+    foos.select($.b.as("b1")).show()
+    foos.select(($.b + $.b).as("b2")).show()
     foos.select($.b, $.b).show()
     // foos.select($.*).show()
 
-    val afterSelect = foos.select(($.b + $.b).named("i"), $.a.named("str"))
+    val bazs = foos.select(($.b + $.b).as("i"), $.a.as("str"))
 
-    afterSelect.show()
+    bazs.show()
 
-    println(afterSelect.collect[Baz1]())
-
-    // // afterSelect.select($.bc.named["bbb"]).show() // <- This won't compile
+    println(bazs.collect[Baz]())
 
     val persons = Seq(
       Person(1, PersonName("William", "Shakespeare"))
@@ -82,14 +76,18 @@ object HelloSpark {
 
     persons.select($.name).show()
 
+    Seq(FlatPerson(1, "William", "Shakespeare"))
+      .toTypedDF
+      .select(($.firstName ++ lit(" ") ++ $.lastName).as("fullName"))
+      .show()
 
-    ///////
+    // ///////
 
-    // TODOs:
+    // // TODOs:
 
-    // persons.select($.name.first).show()
+    // // persons.select($.name.first).show()
 
-    ////////
+    // ////////
 
     val bars = Seq(
       Bar(1, "XXX"),

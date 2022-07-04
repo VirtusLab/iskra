@@ -3,7 +3,6 @@ package org.virtuslab.typedframes
 import scala.quoted.*
 
 import org.virtuslab.typedframes.types.StructType
-import org.apache.spark.sql.{ DataFrame => UntypedDataFrame }
 
 enum JoinType:
   case Inner
@@ -13,7 +12,7 @@ enum JoinType:
   // TODO: Add other join types (treating Cross join separately?)
 
 class Join[DF1 <: DataFrame[FrameSchema], DF2 <: DataFrame[FrameSchema]](left: UntypedDataFrame, right: UntypedDataFrame, joinType: JoinType):
-  transparent inline def on = ${ ConditionalJoiner.make[DF1, DF2]('left, 'right, 'joinType) }
+  transparent inline def on = ${ ConditionalJoin.make[DF1, DF2]('left, 'right, 'joinType) }
 
 object Join:
   given joinOps: {} with

@@ -2,7 +2,7 @@ package org.virtuslab.typedframes
 
 import scala.quoted._
 import org.apache.spark.sql
-import org.apache.spark.sql.{ DataFrame => UntypedDataFrame, SparkSession }
+import org.apache.spark.sql.SparkSession
 import org.virtuslab.typedframes.DataFrame
 import org.virtuslab.typedframes.DataFrame.untypedDataFrameOps
 import org.virtuslab.typedframes.types.DataType

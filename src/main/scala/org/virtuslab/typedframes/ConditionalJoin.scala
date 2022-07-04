@@ -2,20 +2,15 @@ package org.virtuslab.typedframes
 
 import scala.quoted.*
 import org.virtuslab.typedframes.types.{BooleanType, StructType}
-import org.apache.spark.sql.{DataFrame => UntypedDataFrame}
 
-abstract class ConditionalJoiner[DF1 <: DataFrame[?], DF2 <: DataFrame[?]](
+abstract class ConditionalJoin[DF1 <: DataFrame[?], DF2 <: DataFrame[?]](
   left: UntypedDataFrame, right: UntypedDataFrame, joinType: JoinType
 ):
   type MergedSchema <: FrameSchema
-  type MergedView <: SelectionView
+  type MergedView <: SchemaView
   val mergedView: MergedView
-  def apply(f: SelectCtx { type CtxOut = MergedView } ?=> TypedColumn[BooleanType]): DataFrame[MergedSchema] =
-    val ctx = new SelectCtx {
-      type CtxOut = MergedView
-      def ctxOut: MergedView = mergedView
-    }
-    val condition = f(using ctx).untyped
+  def apply(conditionColumn: MergedView ?=> TypedColumn[BooleanType]): DataFrame[MergedSchema] =
+    val condition = conditionColumn(using mergedView).untyped
 
     val sparkJoinType = joinType match
       case JoinType.Inner => "inner"
@@ -26,18 +21,18 @@ abstract class ConditionalJoiner[DF1 <: DataFrame[?], DF2 <: DataFrame[?]](
     val joined = left.join(right, condition, sparkJoinType)
     DataFrame[MergedSchema](joined)
 
-object ConditionalJoiner:
+object ConditionalJoin:
   def make[DF1 <: DataFrame[?] : Type, DF2 <: DataFrame[?] : Type](
     left: Expr[UntypedDataFrame], right: Expr[UntypedDataFrame], joinType: Expr[JoinType]
-  )(using Quotes): Expr[ConditionalJoiner[DF1, DF2]] =
+  )(using Quotes): Expr[ConditionalJoin[DF1, DF2]] =
     import quotes.reflect.*
     mergeSchemaTypes(Type.of[DF1], Type.of[DF2]) match
       case '[FrameSchema.Subtype[s]] =>
-        val viewExpr = SelectionView.selectionViewExpr[DataFrame[s]]
+        val viewExpr = SchemaView.schemaViewExpr[DataFrame[s]]
         viewExpr.asTerm.tpe.asType match
-          case '[SelectionView.Subtype[v]] =>
+          case '[SchemaView.Subtype[v]] =>
             '{
-              new ConditionalJoiner[DF1, DF2](${left}, ${right}, ${joinType}) {
+              new ConditionalJoin[DF1, DF2](${left}, ${right}, ${joinType}) {
                 type MergedSchema = s
                 type MergedView = v
                 val mergedView: MergedView = (${ viewExpr }).asInstanceOf[v]

@@ -3,7 +3,8 @@
 //> using lib org.apache.spark:spark-sql_2.13:3.2.0
 //> using lib io.github.vincenzobaz::spark-scala3:0.1.3
 
-package org.virtuslab.example
+package org.virtuslab.typedframes
+package example
 
 import scala3encoders.given
 
@@ -39,7 +40,7 @@ object HelloSpark {
     import spark.implicits._
 
     import org.virtuslab.typedframes.api.{*, given}
-    import org.virtuslab.typedframes.functions.lit
+    import org.virtuslab.typedframes.functions.{lit, avg}
     
     val untypedInts = Seq(1, 2, 3, 4).toDF("int")
     untypedInts.show()
@@ -102,13 +103,19 @@ object HelloSpark {
 
     fooos.join(baars).on($.fooos.b === $.baars.b).select($.a, $.baars.b, $.c).show()
 
-
     val nifs = Seq(Nif("XXX", -1), Nif("YYY", -2)).toTypedDF
 
     foos
       .join(bars).on($.foos.b === $.bars.b)
       .join(nifs).on($.bars.c === $.nifs.c)
       .show()
+
+    ////////
+
+    val avgFoos = foos.groupBy($.a).agg(($.a ++ lit("!!!")).as("aaa"), (avg($.b) + lit(1)).as("average"))
+    avgFoos.show()
+
+    avgFoos.select($.average, $.aaa).show()
 
     spark.stop()
   }

@@ -1,7 +1,6 @@
 package org.virtuslab.typedframes
 
 import scala.quoted.*
-import org.apache.spark.sql.{DataFrame => UntypedDataFrame}
 
 object Aliasing:
   def autoAliasTypeImpl[DF <: DataFrame[FrameSchema] : Type](df: Expr[DF])(using Quotes): quotes.reflect.TypeRepr =

@@ -1,7 +1,7 @@
 package org.virtuslab.typedframes
 
 import org.apache.spark.sql
-import org.apache.spark.sql.{ DataFrame => UntypedDataFrame, SparkSession }
+import org.apache.spark.sql.SparkSession
 import scala.quoted.*
 import types.{DataType, StructType}
 
@@ -9,8 +9,9 @@ class DataFrame[+S <: FrameSchema](val untyped: UntypedDataFrame) /* extends Any
   type Alias <: Name
 
 object DataFrame:
-  export SelectOps.select
+  export Select.selectOps
   export Join.joinOps
+  export GroupBy.groupingOps
 
   type Subtype[T <: DataFrame[FrameSchema]] = T
   type WithAlias[T <: String & Singleton] = DataFrame[?] { type Alias = T }

@@ -4,7 +4,7 @@ import scala.quoted._
 import scala.deriving.Mirror
 import org.virtuslab.typedframes.Name
 
-trait DataType
+sealed trait DataType
 
 object DataType:
   type Subtype[T <: DataType] = T
@@ -15,13 +15,16 @@ object DataType:
   object Encoder:
     type Aux[A, E <: DataType] = Encoder[A] { type Encoded = E }
 
-    inline given int: Encoder[Int] with
-      type Encoded = IntegerType
-    inline given string: Encoder[String] with
-      type Encoded = StringType
-
     inline given boolean: Encoder[Boolean] with
       type Encoded = BooleanType
+    inline given string: Encoder[String] with
+      type Encoded = StringType
+    inline given int: Encoder[Int] with
+      type Encoded = IntegerType
+    inline given float: Encoder[Float] with
+      type Encoded = FloatType
+    inline given double: Encoder[Double] with
+      type Encoded = DoubleType
 
     export StructEncoder.fromMirror
 
@@ -55,3 +58,25 @@ object DataType:
               override type Encoded = t
             }): StructEncoder[A] { type Encoded = t }
           }
+
+
+trait BooleanType extends DataType
+trait StringType extends DataType
+trait IntegerType extends DataType
+trait FloatType extends DataType
+trait DoubleType extends DataType
+
+
+sealed trait StructType extends DataType
+
+object StructType:
+  object SNil extends StructType
+  type SNil = SNil.type
+  final case class SCons[N <: Name, H <: DataType, T <: StructType](headLabel: N, headTypeName: String, tail: T) extends StructType//:
+
+  type Subtype[T <: StructType] = T
+
+  type Merge[S1 <: StructType, S2 <: StructType] =
+    S1 match
+      case SNil => S2
+      case SCons[headName, headType, tail] => SCons[headName, headType, Merge[tail, S2]]

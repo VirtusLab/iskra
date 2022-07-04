@@ -3,7 +3,6 @@ package org.virtuslab.typedframes
 import scala.quoted.*
 import scala.deriving.Mirror
 import types.DataType
-import types.{IntegerType, BooleanType, StringType}
 
 type FrameSchema = Tuple
 
@@ -66,7 +65,3 @@ object FrameSchema:
 //   case _: SCons[headLabel, headType, tail] =>
 //     inline val tailSchema = schemaInstance[tail].asInstanceOf[tail]
 //     (new SCons[headLabel, headType, tail](valueOf[headLabel], "FakeType", tailSchema))//.asInstanceOf[Schema]
-
-// inline def sconsSchemaInstance[headLabel <: Name, headType, tail <: FrameSchema]: Schema =
-  
-//   erasedValue[Schema] match

@@ -2,23 +2,24 @@ package org.virtuslab.typedframes
 
 import scala.quoted._
 import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.{DataFrame => UntypedDataFrame}
 import types.{DataType, StructType}
 
-trait SelectionView extends Selectable:
+inline def $(using view: SchemaView): view.type = view
+
+trait SchemaView extends Selectable:
   def frameAliases: Seq[String] // TODO: get rid of this in runtime
   
   // TODO: What should be the semantics of `*`? How to handle ambiguous columns?
   // type AllColumns <: Tuple
   // def * : AllColumns
   
-  def selectDynamic(name: String): AliasedSelectionView | LabeledColumn[?, ?] =
+  def selectDynamic(name: String): AliasedSchemaView | LabeledColumn[?, ?] =
     if frameAliases.contains(name)
-      then AliasedSelectionView(name)
+      then AliasedSchemaView(name)
       else LabeledColumn(col(Name.escape(name)))
 
-object SelectionView:
-  type Subtype[T <: SelectionView] = T
+object SchemaView:
+  type Subtype[T <: SchemaView] = T
 
   // private def reifyColumns[T <: Tuple : Type](using Quotes): Expr[Tuple] = reifyCols(Type.of[T])
 
@@ -40,7 +41,7 @@ object SelectionView:
         val newBase = Refinement(base, name, info)
         refineType(newBase, refinementsTail)
 
-  private def selectionViewType(using Quotes)(base: quotes.reflect.TypeRepr, schemaType: Type[?]): quotes.reflect.TypeRepr =
+  private def schemaViewType(using Quotes)(base: quotes.reflect.TypeRepr, schemaType: Type[?]): quotes.reflect.TypeRepr =
     import quotes.reflect.*
     schemaType match
       case '[EmptyTuple] => base
@@ -52,9 +53,9 @@ object SelectionView:
           case '[n] => Type.valueOfConstant[n].get.toString
         val info = TypeRepr.of[LabeledColumn[headLabel, headType]]
         val newBase = Refinement(base, name, info)
-        selectionViewType(newBase, Type.of[tail])
+        schemaViewType(newBase, Type.of[tail])
 
-  def selectionViewExpr[DF <: DataFrame[?] : Type](using Quotes): Expr[SelectionView] =
+  def schemaViewExpr[DF <: DataFrame[?] : Type](using Quotes): Expr[SchemaView] =
     import quotes.reflect.*
     Type.of[DF] match
       case '[DataFrame[schema]] =>
@@ -62,12 +63,12 @@ object SelectionView:
         val aliasViewsByName = frameAliasViewsByName(schemaType)
         val columns = unambiguousColumns(schemaType)    
         val frameAliasNames = Expr(aliasViewsByName.map(_._1))
-        val baseType = TypeRepr.of[SelectionView /* { type AllColumns = schema } */]
+        val baseType = TypeRepr.of[SchemaView /* { type AllColumns = schema } */]
         val viewType = refineType(refineType(baseType, columns), aliasViewsByName) // TODO: conflicting name of frame alias and column?
 
         viewType.asType match
-          case '[SelectionView.Subtype[t]] => '{
-            new SelectionView {
+          case '[SchemaView.Subtype[t]] => '{
+            new SchemaView {
               override def frameAliases: Seq[String] = ${ frameAliasNames }
               // type AllColumns = schema 
               // override def * : AllColumns =
@@ -91,7 +92,7 @@ object SelectionView:
     import quotes.reflect.*
     allPrefixedColumns(schemaType).groupBy(_._1).map { (frameName, values) =>
       val columnTypes = values.map(_._2)
-      frameName -> refineType(TypeRepr.of[AliasedSelectionView], columnTypes)
+      frameName -> refineType(TypeRepr.of[AliasedSchemaView], columnTypes)
     }.toList
 
   def unambiguousColumns(using Quotes)(schemaType: Type[?]): List[(String, quotes.reflect.TypeRepr)] =
@@ -111,7 +112,7 @@ object SelectionView:
         val colName = Type.valueOfConstant[name].get.toString
         val namedColumn = colName -> TypeRepr.of[LabeledColumn[name, dataType]]
         namedColumn :: allColumns(Type.of[tail])
-class AliasedSelectionView(frameAliasName: String) extends Selectable:
+class AliasedSchemaView(frameAliasName: String) extends Selectable:
   def selectDynamic(name: String): LabeledColumn[Name, DataType] =
     val columnName = s"${Name.escape(frameAliasName)}.${Name.escape(name)}"
     LabeledColumn[Name, DataType](col(columnName))

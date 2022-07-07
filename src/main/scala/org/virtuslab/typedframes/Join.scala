@@ -12,10 +12,10 @@ enum JoinType:
   // TODO: Add other join types (treating Cross join separately?)
 
 class Join[DF1 <: DataFrame[FrameSchema], DF2 <: DataFrame[FrameSchema]](left: UntypedDataFrame, right: UntypedDataFrame, joinType: JoinType):
-  transparent inline def on = ${ ConditionalJoin.make[DF1, DF2]('left, 'right, 'joinType) }
+  transparent inline def on: JoinOnCondition[?, ?] = ${ JoinOnCondition.make[DF1, DF2]('left, 'right, 'joinType) }
 
 object Join:
-  given joinOps: {} with
+  given dataFrameJoinOps: {} with
     extension [DF1 <: DataFrame[FrameSchema], DF2 <: DataFrame[FrameSchema]](inline df1: DF1)
       transparent inline def join(inline df2: DF2) = ${ joinImpl('{df1}, '{df2}, '{JoinType.Inner}) }
       transparent inline def innerJoin(inline df2: DF2) = ${ joinImpl('{df1}, '{df2}, '{JoinType.Inner}) }

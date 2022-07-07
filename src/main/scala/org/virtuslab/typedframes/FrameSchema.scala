@@ -18,12 +18,17 @@ object FrameSchema:
     case LabeledColumn[(Name.Subtype[framePrefix], Name.Subtype[name]), dataType] *: tail =>
       LabeledColumn[(N, name), dataType] *: Reowned[tail, N]
 
+  type TupleSubtype[T <: Tuple] = T
+
+  def isValidType(tpe: Type[?])(using Quotes): Boolean = tpe match
+    case '[EmptyTuple] => true
+    case '[(label ~> column) *: tail] => isValidType(Type.of[tail])
+    case _ => false
+
   trait Encoder[A]:
     type Encoded <: FrameSchema
 
   object Encoder:
-    type TupleSubtype[T <: Tuple] = T
-
     def getEncodedType(using quotes: Quotes)(mirroredElemLabels: Type[?], mirroredElemTypes: Type[?]): quotes.reflect.TypeRepr =
       import quotes.reflect.*
 

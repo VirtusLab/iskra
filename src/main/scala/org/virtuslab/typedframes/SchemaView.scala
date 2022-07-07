@@ -20,7 +20,7 @@ trait SchemaView extends Selectable:
 
 object SchemaView:
   type Subtype[T <: SchemaView] = T
-
+  
   // private def reifyColumns[T <: Tuple : Type](using Quotes): Expr[Tuple] = reifyCols(Type.of[T])
 
   // private def reifyCols(using Quotes)(schemaType: Type[?]): Expr[Tuple] =
@@ -31,7 +31,7 @@ object SchemaView:
   //       headLabel1 match
   //         case '[Name.Subtype[name]] => // TODO: handle frame prefixes
   //           val label = Expr(Type.valueOfConstant[name].get.toString)
-  //           '{ TypedColumn[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
+  //           '{ Column[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
 
   private def refineType(using Quotes)(base: quotes.reflect.TypeRepr, refinements: List[(String, quotes.reflect.TypeRepr)]): quotes.reflect.TypeRepr =
     import quotes.reflect.*
@@ -88,7 +88,7 @@ object SchemaView:
         val colName = Type.valueOfConstant[name].get.toString
         (prefix -> (colName -> TypeRepr.of[LabeledColumn[name, dataType]])) :: allPrefixedColumns(Type.of[tail])
 
-  def frameAliasViewsByName(using Quotes)(schemaType: Type[?]): List[(String, quotes.reflect.TypeRepr /* Seq[quotes.reflect.TypeRepr] */)] =
+  def frameAliasViewsByName(using Quotes)(schemaType: Type[?]): List[(String, quotes.reflect.TypeRepr)] =
     import quotes.reflect.*
     allPrefixedColumns(schemaType).groupBy(_._1).map { (frameName, values) =>
       val columnTypes = values.map(_._2)

@@ -1,8 +1,8 @@
 package org.virtuslab.typedframes
 
 import org.apache.spark.sql
-import org.virtuslab.typedframes.{TypedColumn as Col}
-import org.virtuslab.typedframes.TypedColumn.untypedColumnOps
+import org.virtuslab.typedframes.{Column as Col}
+import org.virtuslab.typedframes.Column.untypedColumnOps
 import org.virtuslab.typedframes.types.*
 
 // trait ColumnOp

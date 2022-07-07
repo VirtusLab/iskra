@@ -9,9 +9,9 @@ class DataFrame[+S <: FrameSchema](val untyped: UntypedDataFrame) /* extends Any
   type Alias <: Name
 
 object DataFrame:
-  export Select.selectOps
-  export Join.joinOps
-  export GroupBy.groupingOps
+  export Select.dataFrameSelectOps
+  export Join.dataFrameJoinOps
+  export GroupBy.dataFrameGroupByOps
 
   type Subtype[T <: DataFrame[FrameSchema]] = T
   type WithAlias[T <: String & Singleton] = DataFrame[?] { type Alias = T }

@@ -3,36 +3,55 @@ package org.virtuslab.typedframes
 import scala.quoted.*
 import types.{ DataType, StructType }
 
-class Select[V <: SchemaView](view: V, underlying: UntypedDataFrame):
-  import Select.SelectColumns
-  def apply[T](selectedColumns: V ?=> T)(using mc: SelectColumns[T]): DataFrame[mc.OutputSchema] =
-    val typedCols = selectedColumns(using view)
-    val columns  = mc.columns(typedCols)
-    DataFrame[mc.OutputSchema](underlying.select(columns*))
+trait Select[View <: SchemaView]:
+  val view: View
+  def underlying: UntypedDataFrame
 
 object Select:
-  given selectOps: {} with
+  given dataFrameSelectOps: {} with
     extension [DF <: DataFrame[?]](tdf: DF)
       transparent inline def select: Select[?] = ${ Select.selectImpl[DF]('{tdf}) }
+
+  given selectApply: {} with
+    extension [View <: SchemaView](select: Select[View])
+      transparent inline def apply[Columns](columns: View ?=> Columns): DataFrame[?] =
+        ${ Select.applyImpl[View, Columns]('select, 'columns) }
+
+  def applyImpl[View <: SchemaView : Type, Columns : Type](
+    select: Expr[Select[View]],
+    columns: Expr[View ?=> Columns]
+  )(using Quotes): Expr[DataFrame[?]] =
+    import quotes.reflect.*
+    Type.of[Columns] match
+      case '[name ~> colType] =>
+        '{
+          DataFrame[(name ~> colType) *: EmptyTuple](
+            ${ select }.underlying.select(${ columns }(using ${ select }.view).asInstanceOf[name ~> colType].untyped)
+          )
+        }
+        
+      case '[FrameSchema.Subtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
+        '{
+          val cols = ${ columns }(using ${ select }.view).asInstanceOf[s].toList.map(_.asInstanceOf[Column[?]].untyped)
+          DataFrame[s](${ select }.underlying.select(cols*))
+        }
+
+      case '[t] =>
+        val errorMsg = s"""The parameter of `select` should be a named column (e.g. of type: "foo" ~> StringType) or a tuple of named columns but it has type: ${Type.show[t]}"""
+        report.errorAndAbort(errorMsg, MacroHelpers.callPosition(select))
+
+  def typeOfColumns(columns: Type[?])(using Quotes) =
+    columns match
+      case '[name ~> colType] => Type.of[(name ~> colType) *: EmptyTuple]
 
   def selectImpl[DF <: DataFrame[?] : Type](tdf: Expr[DF])(using Quotes): Expr[Select[?]] =
     import quotes.reflect.asTerm
     val viewExpr = SchemaView.schemaViewExpr[DF]
     viewExpr.asTerm.tpe.asType match
       case '[SchemaView.Subtype[v]] =>
-        '{ Select[v](${ viewExpr }.asInstanceOf[v], ${ tdf }.untyped) }
-
-  trait SelectColumns[T]:
-    type OutputSchema <: FrameSchema
-    def columns(t: T): List[UntypedColumn]
-
-  object SelectColumns:
-    transparent inline given selectSingleColumn[N <: Name, A <: DataType]: SelectColumns[LabeledColumn[N, A]] =
-      new SelectColumns[LabeledColumn[N, A]]:
-        type OutputSchema = Tuple1[LabeledColumn[N, A]]
-        def columns(t: LabeledColumn[N, A]): List[UntypedColumn] = List(t.untyped)
-
-    transparent inline given selectMultipleColumns[T <: Tuple]: SelectColumns[T] =
-      new SelectColumns[T]:
-        type OutputSchema = T
-        def columns(t: T): List[UntypedColumn] = t.toList.map(col => col.asInstanceOf[TypedColumn[DataType]].untyped)
+        '{
+          new Select[v] {
+            val view = ${ viewExpr }.asInstanceOf[v]
+            def underlying = ${ tdf }.untyped
+          }
+        }

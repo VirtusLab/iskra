@@ -9,3 +9,9 @@ private[typedframes] object MacroHelpers:
     val start = ownerExpr.asTerm.pos.end
     val end = Position.ofMacroExpansion.end
     Position(file, start, end)
+
+  type TupleSubtype[T <: Tuple] = T
+
+  type AsTuple[A] <: Tuple = A match
+    case TupleSubtype[t] => t
+    case _ => A *: EmptyTuple

@@ -1,7 +1,7 @@
 package org.virtuslab.typedframes
 
 import scala.quoted.*
-import types.{ DataType, StructType }
+import MacroHelpers.TupleSubtype
 
 trait Select[View <: SchemaView]:
   val view: View
@@ -23,26 +23,22 @@ object Select:
   )(using Quotes): Expr[DataFrame[?]] =
     import quotes.reflect.*
     Type.of[Columns] match
-      case '[name ~> colType] =>
+      case '[name := colType] =>
         '{
-          DataFrame[(name ~> colType) *: EmptyTuple](
-            ${ select }.underlying.select(${ columns }(using ${ select }.view).asInstanceOf[name ~> colType].untyped)
+          DataFrame[name := colType](
+            ${ select }.underlying.select(${ columns }(using ${ select }.view).asInstanceOf[name := colType].untyped)
           )
         }
         
-      case '[FrameSchema.Subtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
+      case '[TupleSubtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
         '{
           val cols = ${ columns }(using ${ select }.view).asInstanceOf[s].toList.map(_.asInstanceOf[Column[?]].untyped)
           DataFrame[s](${ select }.underlying.select(cols*))
         }
 
       case '[t] =>
-        val errorMsg = s"""The parameter of `select` should be a named column (e.g. of type: "foo" ~> StringType) or a tuple of named columns but it has type: ${Type.show[t]}"""
+        val errorMsg = s"""The parameter of `select` should be a named column (e.g. of type: "foo" := StringType) or a tuple of named columns but it has type: ${Type.show[t]}"""
         report.errorAndAbort(errorMsg, MacroHelpers.callPosition(select))
-
-  def typeOfColumns(columns: Type[?])(using Quotes) =
-    columns match
-      case '[name ~> colType] => Type.of[(name ~> colType) *: EmptyTuple]
 
   def selectImpl[DF <: DataFrame[?] : Type](tdf: Expr[DF])(using Quotes): Expr[Select[?]] =
     import quotes.reflect.asTerm

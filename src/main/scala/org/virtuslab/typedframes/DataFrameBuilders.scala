@@ -4,26 +4,30 @@ import scala.quoted._
 import org.apache.spark.sql
 import org.apache.spark.sql.SparkSession
 import org.virtuslab.typedframes.DataFrame
-import org.virtuslab.typedframes.DataFrame.untypedDataFrameOps
-import org.virtuslab.typedframes.types.DataType
+import org.virtuslab.typedframes.types.{DataType, StructType}
+import DataType.{Encoder, StructEncoder, PrimitiveEncoder}
 
 object DataFrameBuilders:
-  given primitiveTypeBuilderOps: {} with
-    extension [A <: Int | String | Boolean](seq: Seq[A])(using typeEncoder: DataType.Encoder[A], spark: SparkSession) // TODO: Add more primitive types
-      transparent inline def toTypedDF[N <: Name](name: N): DataFrame[?] = ${ toTypedDFWithNameImpl[N, A, typeEncoder.Encoded]('seq, 'spark) }
+  extension [A](seq: Seq[A])(using encoder: Encoder[A])
+    transparent inline def toTypedDF(using spark: SparkSession): DataFrame[?] = ${ toTypedDFImpl('seq, 'encoder, 'spark) }
 
-  private def toTypedDFWithNameImpl[N <: Name : Type, A : Type, E <: DataType : Type](using Quotes)(seq: Expr[Seq[A]], spark: Expr[SparkSession]): Expr[DataFrame[?]] =
-    '{
-      val s = ${spark}
-      given sql.Encoder[A] = ${ Expr.summon[sql.Encoder[A]].get }
-      import s.implicits.*
-      DataFrame[Tuple1[LabeledColumn[N, E]]](
-        localSeqToDatasetHolder(${seq}).toDF(valueOf[N])
-      )
-    }
+  private def toTypedDFImpl[A : Type](seq: Expr[Seq[A]], encoder: Expr[Encoder[A]], spark: Expr[SparkSession])(using Quotes) =
+    val (schemaType, schema, encodeFun) = encoder match
+      case '{ $e: DataType.StructEncoder.Aux[A, t] } =>
+        val schema = '{ ${ e }.catalystType }
+        val encodeFun: Expr[A => sql.Row] = '{ ${ e }.encode }
+        (Type.of[t], schema, encodeFun)
+      case '{ $e: DataType.Encoder.Aux[tpe, t] } =>
+        val schema = '{
+          sql.types.StructType(Seq(
+            sql.types.StructField("value", ${ encoder }.catalystType, ${ encoder }.isNullable )
+          ))
+        }
+        val encodeFun: Expr[A => sql.Row] = '{ (value: A) => sql.Row(${ encoder }.encode(value)) }
+        (Type.of["value" := t], schema, encodeFun)
 
-  given complexTypeBuilderOps: {} with
-    extension [A](seq: Seq[A])(using typeEncoder: FrameSchema.Encoder[A], runtimeEncoder: sql.Encoder[A], spark: SparkSession)
-      inline def toTypedDF: DataFrame[typeEncoder.Encoded] =
-        import spark.implicits.*
-        seq.toDF(/* Should we explicitly pass columns here? */).typed
+    schemaType match
+      case '[t] => '{
+        val rowRDD = ${ spark }.sparkContext.parallelize(${ seq }.map(${ encodeFun }))
+        DataFrame[t](${ spark }.createDataFrame(rowRDD, ${ schema }))
+      }

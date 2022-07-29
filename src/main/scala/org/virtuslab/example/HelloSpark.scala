@@ -1,56 +1,49 @@
-//> using scala "3.2.0-RC0-bin-SNAPSHOT"
-//> using lib org.apache.spark:spark-core_2.13:3.2.0
-//> using lib org.apache.spark:spark-sql_2.13:3.2.0
-//> using lib io.github.vincenzobaz::spark-scala3:0.1.3
+package org.virtuslab.example
 
-package org.virtuslab.typedframes
-package example
-
-import scala3encoders.given
-
-import org.apache.spark.sql.SparkSession
-
-case class JustInt(int: Int)
-
-case class Foo(a: String, b: Int)
-case class Bar(b: Int, c: String)
-case class Nif(c: String, d: Int)
-
-case class FooBar(a: String, b: Int, c: String)
-
-case class Baz(i: Int, str: String)
-
-case class PersonName(first: String, last: String)
-case class Person(id: Int, name: PersonName)
-case class FlatPerson(id: Int, firstName: String, lastName: String)
-
-case class XXX(x1: Int, x2: String)
-case class YYY(y1: Int, y2: String)
+import org.virtuslab.typedframes.api.*
+import org.virtuslab.typedframes.functions.{lit, avg}
 
 object HelloSpark {
+  case class JustInt(i: Int)
+
+  case class Foo(a: String, b: Int)
+  case class Bar(b: Int, c: Option[String])
+  case class Nif(c: String, d: Int)
+
+  case class FooBar(a: String, b: Int, c: String)
+
+  case class Baz(i: Int, str: String)
+
+  case class PersonName(first: String, last: String)
+  case class Person(id: Int, name: PersonName)
+  case class FlatPerson(id: Int, firstName: String, lastName: String)
+
+  case class XXX(x1: Int, x2: String)
+  case class YYY(y1: Int, y2: String)
+
   def main(args: Array[String]): Unit = {
-    implicit lazy val spark: SparkSession = {
+    given spark: SparkSession = {
       SparkSession
         .builder()
         .master("local")
-        .appName("spark test example")
+        .appName("Hello Spark")
         .getOrCreate()
     }
 
-    import spark.implicits._
-
-    import org.virtuslab.typedframes.api.{*, given}
-    import org.virtuslab.typedframes.functions.{lit, avg}
-    
-    val untypedInts = Seq(1, 2, 3, 4).toDF("int")
+    val untypedInts = 
+      import spark.implicits._
+      Seq(1, 2, 3, 4).toDF("int")
+      
     untypedInts.show()
 
     val typedInts = untypedInts.typed[JustInt]
 
-    val ints = Seq(1, 2, 3, 4).toTypedDF("i")
+    val ints = Seq(1, 2, 3, 4).toTypedDF
     ints.show()
 
-    val strings = Seq("abc", "def").toTypedDF("ab")
+    println(ints.collectAs[Int])
+
+    val strings = Seq("abc", "def").toTypedDF
     strings.show()
 
     val foos = Seq(
@@ -60,20 +53,23 @@ object HelloSpark {
 
     foos.show()
 
+    println(foos.select($.b.as("i")).collectAs[JustInt])
+
     foos.select($.b.as("b1")).show()
     foos.select(($.b + $.b).as("b2")).show()
     foos.select($.b, $.b).show()
-    // foos.select($.*).show()
 
     val bazs = foos.select(($.b + $.b).as("i"), $.a.as("str"))
 
     bazs.show()
 
-    println(bazs.collect[Baz]())
+    println(bazs.collectAs[Baz])
 
     val persons = Seq(
       Person(1, PersonName("William", "Shakespeare"))
     ).toTypedDF
+
+    persons.show()
 
     persons.select($.name).show()
 
@@ -82,17 +78,17 @@ object HelloSpark {
       .select(($.firstName ++ lit(" ") ++ $.lastName).as("fullName"))
       .show()
 
-    // ///////
+    ///////
 
-    // // TODOs:
+    // TODOs:
 
-    // // persons.select($.name.first).show()
+    // persons.select($.name.first).show()
 
-    // ////////
+    ////////
 
     val bars = Seq(
-      Bar(1, "XXX"),
-      Bar(2, "YYY")
+      Bar(1, Some("XXX")),
+      Bar(2, None)
     ).toTypedDF
 
     foos.as("foos").join(bars.as("bars")).on($.foos.b === $.bars.b).select($.a, $.bars.b, $.c).show()
@@ -112,7 +108,7 @@ object HelloSpark {
 
     ////////
 
-    val avgFoos = foos.groupBy($.a).agg(($.a ++ lit("!!!")).as("aaa"), (avg($.b) + lit(1)).as("average"))
+    val avgFoos = foos.groupBy($.a).agg(($.a ++ lit("!!!")).as("aaa"), (avg($.b) + lit(1.0d)).as("average"))
     avgFoos.show()
 
     avgFoos.select($.average, $.aaa).show()

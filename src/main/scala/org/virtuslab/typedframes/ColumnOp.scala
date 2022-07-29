@@ -1,117 +1,148 @@
 package org.virtuslab.typedframes
 
+import scala.quoted.*
 import org.apache.spark.sql
+import org.apache.spark.sql.functions.concat
 import org.virtuslab.typedframes.{Column as Col}
 import org.virtuslab.typedframes.Column.untypedColumnOps
 import org.virtuslab.typedframes.types.*
-
-// trait ColumnOp
+import DataType.*
 
 object ColumnOp:
-  type AdditiveResult[T1 <: DataType, T2 <: DataType] <: DataType = (T1, T2) match
-    case (IntegerType, IntegerType) => IntegerType
-    case (IntegerType, FloatType) => FloatType
-    case (FloatType, IntegerType) => FloatType
-    case (FloatType, FloatType) => FloatType
-    case (IntegerType, DoubleType) => DoubleType
-    case (DoubleType, IntegerType) => DoubleType
-    case (FloatType, DoubleType) => DoubleType
-    case (DoubleType, FloatType) => DoubleType
-    case (DoubleType, DoubleType) => DoubleType
-
   trait Plus[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped + col2.untyped).typed[Out]
   object Plus:
-    given [T1 <: DataType, T2 <: DataType]: Plus[T1, T2] with
-      type Out = AdditiveResult[T1, T2]
-    // given Plus[IntegerType, IntegerType] with
-    //   type Out = Col[IntegerType]
-    // given Plus[IntegerType, DoubleType] with
-    //   type Out = DoubleType
-    // given Plus[DoubleType, IntegerType] with
-    //   type Out = DoubleType
-    // given Plus[DoubleType, DoubleType] with
-    //   type Out = DoubleType
+    transparent inline given numeric[T1 <: NumericOptType, T2 <: NumericOptType]: Plus[T1, T2] = ${ numericImpl[T1, T2] }
+    private def numericImpl[T1 <: NumericOptType : Type, T2  <: NumericOptType : Type](using Quotes) =
+      DataType.commonNumericType[T1, T2] match
+        case '[t] =>
+          '{
+            (new Plus[T1, T2] { type Out = t }): Plus[T1, T2] { type Out = t }
+          }
 
   trait Minus[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped - col2.untyped).typed[Out]
   object Minus:
-    given [T1 <: DataType, T2 <: DataType]: Minus[T1, T2] with
-      type Out = AdditiveResult[T1, T2]
+    transparent inline given numeric[T1 <: NumericOptType, T2 <: NumericOptType]: Minus[T1, T2] = ${ numericImpl[T1, T2] }
+    private def numericImpl[T1 <: NumericOptType : Type, T2  <: NumericOptType : Type](using Quotes) =
+      DataType.commonNumericType[T1, T2] match
+        case '[t] =>
+          '{
+            (new Minus[T1, T2] { type Out = t }): Minus[T1, T2] { type Out = t }
+          }
+
+  trait Mult[T1 <: DataType, T2 <: DataType]:
+    type Out <: DataType
+    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped * col2.untyped).typed[Out]
+  object Mult:
+    transparent inline given numeric[T1 <: NumericOptType, T2 <: NumericOptType]: Mult[T1, T2] = ${ numericImpl[T1, T2] }
+    private def numericImpl[T1 <: NumericOptType : Type, T2  <: NumericOptType : Type](using Quotes) =
+      DataType.commonNumericType[T1, T2] match
+        case '[t] =>
+          '{
+            (new Mult[T1, T2] { type Out = t }): Mult[T1, T2] { type Out = t }
+          }
+
+  trait Div[T1 <: DataType, T2 <: DataType]:
+    type Out <: DataType
+    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped / col2.untyped).typed[Out]
+  object Div:
+    transparent inline given numeric[T1 <: NumericOptType, T2 <: NumericOptType]: Div[T1, T2] = ${ numericImpl[T1, T2] }
+    private def numericImpl[T1 <: NumericOptType : Type, T2  <: NumericOptType : Type](using Quotes) =
+      val outType = Type.of[(T1, T2)] match
+        case '[(NotNull, NotNull)] => Type.of[DoubleType]
+        case _ => Type.of[DoubleOptType]
+      outType match
+        case '[t] =>
+          '{
+            (new Div[T1, T2] { type Out = t }): Div[T1, T2] { type Out = t }
+          }
 
   trait PlusPlus[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out]
+    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = concat(col1.untyped, col2.untyped).typed[Out]
   object PlusPlus:
-    given PlusPlus[StringType, StringType] with
-      type Out = StringType
-      def apply(col1: Col[StringType], col2: Col[StringType]): Col[Out] = (sql.functions.concat(col1.untyped, col2.untyped)).typed[Out]
+    transparent inline given string[T1 <: StringOptType, T2 <: StringOptType]: PlusPlus[T1, T2] = ${ stringImpl[T1, T2] }
+    private def stringImpl[T1 <: StringOptType : Type, T2  <: StringOptType : Type](using Quotes) =
+      val outType = Type.of[(T1, T2)] match
+        case '[(NotNull, NotNull)] => Type.of[StringType]
+        case _ => Type.of[StringOptType]
+      outType match
+        case '[t] =>
+          '{
+            (new PlusPlus[T1, T2] { type Out = t }): PlusPlus[T1, T2] { type Out = t }
+          }
 
-  trait Eq[T1 <: DataType, T2 <: DataType]:
-    type Out = BooleanType
+  trait Eq[-T1 <: DataType, -T2 <: DataType]:
+    type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped === col2.untyped).typed[Out]
   object Eq:
-    given Eq[BooleanType, BooleanType] with {}
-    given Eq[StringType, StringType] with {}
-    given Eq[IntegerType, IntegerType] with {}
-    given Eq[DoubleType, DoubleType] with {}
+    given nonNullable[T <: NotNull]: Eq[T, T] with
+      type Out = BooleanType
+    given nullable[T <: DataType]: Eq[T, T] with
+      type Out = BooleanOptType
 
-  trait Ne[T1 <: DataType, T2 <: DataType]:
-    type Out = BooleanType
+  trait Ne[-T1 <: DataType, -T2 <: DataType]:
+    type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped =!= col2.untyped).typed[Out]
   object Ne:
-    given Ne[BooleanType, BooleanType] with {}
-    given Ne[StringType, StringType] with {}
-    given Ne[IntegerType, IntegerType] with {}
-    given Ne[DoubleType, DoubleType] with {}
+    given nonNullable[T <: NotNull]: Ne[T, T] with
+      type Out = BooleanType
+    given nullable[T <: DataType]: Ne[T, T] with
+      type Out = BooleanOptType
 
-  trait Lt[T1 <: DataType, T2 <: DataType]:
-    type Out = BooleanType
+  trait Lt[-T1 <: DataType, -T2 <: DataType]:
+    type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped < col2.untyped).typed[Out]
   object Lt:
-    // TODO: Compare different numeric types?
-    given Lt[StringType, StringType] with {}
-    given Lt[IntegerType, IntegerType] with {}
-    given Lt[FloatType, FloatType] with {}
-    given Lt[DoubleType, DoubleType] with {}
+    given nonNullable[T <: NotNull]: Lt[T, T] with
+      type Out = BooleanType
+    given nullable[T <: DataType]: Lt[T, T] with
+      type Out = BooleanOptType
 
-  trait Le[T1 <: DataType, T2 <: DataType]:
-    type Out = BooleanType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped < col2.untyped).typed[Out]
+  trait Le[-T1 <: DataType, -T2 <: DataType]:
+    type Out <: BooleanOptType
+    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped <= col2.untyped).typed[Out]
   object Le:
-    given Le[StringType, StringType] with {}
-    given Le[IntegerType, IntegerType] with {}
-    given Le[FloatType, FloatType] with {}
-    given Le[DoubleType, DoubleType] with {}
+    given nonNullable[T <: NotNull]: Le[T, T] with
+      type Out = BooleanType
+    given nullable[T <: DataType]: Le[T, T] with
+      type Out = BooleanOptType
 
-  trait Gt[T1 <: DataType, T2 <: DataType]:
-    type Out = BooleanType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped < col2.untyped).typed[Out]
+  trait Gt[-T1 <: DataType, -T2 <: DataType]:
+    type Out <: BooleanOptType
+    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped > col2.untyped).typed[Out]
   object Gt:
-    given Gt[StringType, StringType] with {}
-    given Gt[IntegerType, IntegerType] with {}
-    given Gt[FloatType, FloatType] with {}
-    given Gt[DoubleType, DoubleType] with {}
+    given nonNullable[T <: NotNull]: Gt[T, T] with
+      type Out = BooleanType
+    given nullable[T <: DataType]: Gt[T, T] with
+      type Out = BooleanOptType
 
-  trait Ge[T1 <: DataType, T2 <: DataType]:
-    type Out = BooleanType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped < col2.untyped).typed[Out]
+  trait Ge[-T1 <: DataType, -T2 <: DataType]:
+    type Out <: BooleanOptType
+    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped >= col2.untyped).typed[Out]
   object Ge:
-    given Ge[StringType, StringType] with {}
-    given Ge[IntegerType, IntegerType] with {}
-    given Ge[FloatType, FloatType] with {}
-    given Ge[DoubleType, DoubleType] with {}
+    given nonNullable[T <: NotNull]: Ge[T, T] with
+      type Out = BooleanType
+    given nullable[T <: DataType]: Ge[T, T] with
+      type Out = BooleanOptType
 
-  trait And[T1 <: DataType, T2 <: DataType]:
-    type Out = BooleanType
+  trait And[-T1 <: DataType, -T2 <: DataType]:
+    type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped && col2.untyped).typed[Out]
   object And:
-    given And[BooleanType, BooleanType] with {}
+    given nonNullable[T <: NotNull]: And[T, T] with
+      type Out = BooleanType
+    given nullable[T <: DataType]: And[T, T] with
+      type Out = BooleanOptType
 
-  trait Or[T1 <: DataType, T2 <: DataType]:
-    type Out = BooleanType
+  trait Or[-T1 <: DataType, -T2 <: DataType]:
+    type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped || col2.untyped).typed[Out]
   object Or:
-    given Or[BooleanType, BooleanType] with {}
+    given nonNullable[T <: NotNull]: Or[T, T] with
+      type Out = BooleanType
+    given nullable[T <: DataType]: Or[T, T] with
+      type Out = BooleanOptType

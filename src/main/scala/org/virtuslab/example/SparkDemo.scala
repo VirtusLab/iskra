@@ -1,23 +1,17 @@
-package org.virtuslab.typedframes
-package example
+package org.virtuslab.example
 
-import scala3encoders.given
-
-import org.apache.spark.sql.SparkSession
+import org.virtuslab.typedframes.api.*
+import org.virtuslab.typedframes.api.functions.avg
 
 object SparkDemo {
   def main(args: Array[String]): Unit = {
-    implicit lazy val spark: SparkSession = {
+    given spark: SparkSession = {
       SparkSession
         .builder()
         .master("local")
-        .appName("spark test example")
+        .appName("Demo")
         .getOrCreate()
     }
-
-    import spark.implicits._
-    import org.virtuslab.typedframes.api.{*, given}
-    import org.virtuslab.typedframes.functions.*
     
     case class City(name: String, population: Int)
     case class Country(name: String, continent: String, capital: String, population: Int, gdp: Int)

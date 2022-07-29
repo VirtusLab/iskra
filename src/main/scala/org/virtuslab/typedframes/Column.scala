@@ -3,34 +3,44 @@ package org.virtuslab.typedframes
 import org.apache.spark.sql.{ Column => UntypedColumn}
 import types.DataType
 
-class Column[T <: DataType](val untyped: UntypedColumn) /* extends AnyVal */:
-  inline def as[N <: Name](name: N)(using v: ValueOf[N]): LabeledColumn[N, T] =
-    LabeledColumn[N, T](untyped.as(v.value))
+class Column[+T <: DataType](val untyped: UntypedColumn):
 
   inline def name(using v: ValueOf[Name]): Name = v.value
-
-  inline def +[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Plus[T, T2]): Column[op.Out] = op(this, that)
-  inline def -[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Minus[T, T2]): Column[op.Out] = op(this, that)
-  inline def ++[T2 <: DataType](that: Column[T2])(using op: ColumnOp.PlusPlus[T, T2]): Column[op.Out] = op(this, that)
-  inline def <[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Lt[T, T2]): Column[op.Out] = op(this, that)
-  inline def <=[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Le[T, T2]): Column[op.Out] = op(this, that)
-  inline def >[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Gt[T, T2]): Column[op.Out] = op(this, that)
-  inline def >=[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Ge[T, T2]): Column[op.Out] = op(this, that)
-  inline def ===[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Eq[T, T2]): Column[op.Out] = op(this, that)
-  inline def =!=[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Ne[T, T2]): Column[op.Out] = op(this, that)
-  inline def &&[T2 <: DataType](that: Column[T2])(using op: ColumnOp.And[T, T2]): Column[op.Out] = op(this, that)
-  inline def ||[T2 <: DataType](that: Column[T2])(using op: ColumnOp.Or[T, T2]): Column[op.Out] = op(this, that)
 
 object Column:
   given untypedColumnOps: {} with
     extension (untyped: UntypedColumn)
       def typed[A <: DataType] = Column[A](untyped)
 
-@annotation.showAsInfix
-class ~>[L <: LabeledColumn.Label, T <: DataType](untyped: UntypedColumn) extends Column[T](untyped)
+  extension [T <: DataType](col: Column[T])
+    inline def as[N <: Name](name: N)(using v: ValueOf[N]): LabeledColumn[N, T] =
+      LabeledColumn[N, T](col.untyped.as(v.value))
+    inline def alias[N <: Name](name: N)(using v: ValueOf[N]): LabeledColumn[N, T] =
+      LabeledColumn[N, T](col.untyped.as(v.value))
 
-type LabeledColumn[L <: LabeledColumn.Label, T <: DataType] = ~>[L, T]
+  extension [T1 <: DataType](col1: Column[T1])
+    inline def +[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Plus[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def -[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Minus[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def *[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Mult[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def /[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Div[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def ++[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.PlusPlus[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def <[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Lt[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def <=[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Le[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def >[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Gt[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def >=[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Ge[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def ===[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Eq[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def =!=[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Ne[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def &&[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.And[T1, T2]): Column[op.Out] = op(col1, col2)
+    inline def ||[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Or[T1, T2]): Column[op.Out] = op(col1, col2)
+
+@annotation.showAsInfix
+class :=[L <: LabeledColumn.Label, T <: DataType](untyped: UntypedColumn) extends Column[T](untyped)
+
+@annotation.showAsInfix
+trait /[+Prefix <: Name, +Suffix <: Name]
+
+type LabeledColumn[L <: LabeledColumn.Label, T <: DataType] = :=[L, T]
 
 object LabeledColumn:
-  type Label = Name | (Name, Name)
-  def apply[L <: LabeledColumn.Label, T <: DataType](untyped: UntypedColumn) = new ~>[L, T](untyped)
+  type Label = Name | (Name / Name)
+  def apply[L <: LabeledColumn.Label, T <: DataType](untyped: UntypedColumn) = new :=[L, T](untyped)

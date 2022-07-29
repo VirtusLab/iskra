@@ -1,82 +1,242 @@
-package org.virtuslab.typedframes.types
+package org.virtuslab.typedframes
+package types
 
 import scala.quoted._
 import scala.deriving.Mirror
-import org.virtuslab.typedframes.Name
+import org.apache.spark.sql
+import MacroHelpers.TupleSubtype
 
 sealed trait DataType
 
 object DataType:
   type Subtype[T <: DataType] = T
-  
-  trait Encoder[A]:
-    type Encoded <: DataType
+
+  sealed trait NotNull extends DataType
+
+  type NumericType = ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType
+  type NumericOptType = ByteOptType | ShortOptType | IntegerOptType | LongOptType | FloatOptType | DoubleOptType
+
+  def asNotNull(t: Type[?])(using Quotes) = t match
+    case '[BooleanOptType] => Type.of[BooleanType]
+    case '[StringOptType] => Type.of[StringType]
+    case '[ByteOptType] => Type.of[ByteType]
+    case '[ShortOptType] => Type.of[ShortType]
+    case '[IntegerOptType] => Type.of[IntegerType]
+    case '[LongOptType] => Type.of[LongType]
+    case '[FloatOptType] => Type.of[FloatType]
+    case '[DoubleOptType] => Type.of[DoubleType]
+    case '[StructOptType[schema]] => Type.of[StructType[schema]]
+
+  def commonNumericType[T1 : Type, T2 : Type](using Quotes) = 
+    val notNull = Type.of[(T1, T2)] match
+      case '[(NotNull, NotNull)] => true
+      case _ => false
+    val baseType = Type.of[(T1, T2)] match
+      case '[(DoubleOptType, ?)] | '[(?, DoubleOptType)] => Type.of[DoubleOptType]
+      case '[(FloatOptType, ?)] | '[(?, FloatOptType)] => Type.of[FloatOptType]
+      case '[(LongOptType, ?)] | '[(?, LongOptType)] => Type.of[LongOptType]
+      case '[(IntegerOptType, ?)] | '[(?, IntegerOptType)] => Type.of[IntegerOptType]
+      case '[(ShortOptType, ?)] | '[(?, ShortOptType)] => Type.of[ShortOptType]
+      case '[(ByteOptType, ?)] | '[(?, ByteOptType)] => Type.of[ByteOptType]
+
+      if notNull then asNotNull(baseType) else baseType
+
+  trait Encoder[-A]:
+    type ColumnType <: DataType
+    def encode(value: A): Any
+    def decode(value: Any): Any
+    def catalystType: sql.types.DataType
+    def isNullable: Boolean
+
+  trait PrimitiveEncoder[-A] extends Encoder[A]
+
+  trait PrimitiveNullableEncoder[-A] extends PrimitiveEncoder[Option[A]]:
+    def encode(value: Option[A]) = value.orNull
+    def decode(value: Any) = Option(value)
+    def isNullable = true
+
+  trait PrimitiveNonNullableEncoder[-A] extends PrimitiveEncoder[A]:
+    def encode(value: A) = value
+    def decode(value: Any) = value
+    def isNullable = true
+
 
   object Encoder:
-    type Aux[A, E <: DataType] = Encoder[A] { type Encoded = E }
+    type Aux[-A, E <: DataType] = Encoder[A] { type ColumnType = E }
 
-    inline given boolean: Encoder[Boolean] with
-      type Encoded = BooleanType
-    inline given string: Encoder[String] with
-      type Encoded = StringType
-    inline given int: Encoder[Int] with
-      type Encoded = IntegerType
-    inline given float: Encoder[Float] with
-      type Encoded = FloatType
-    inline given double: Encoder[Double] with
-      type Encoded = DoubleType
+    inline given boolean: PrimitiveNonNullableEncoder[Boolean] with
+      type ColumnType = BooleanType
+      def catalystType = sql.types.BooleanType
+    inline given booleanOpt: PrimitiveNullableEncoder[Boolean] with
+      type ColumnType = BooleanOptType
+      def catalystType = sql.types.BooleanType
 
-    export StructEncoder.fromMirror
+    inline given string: PrimitiveNonNullableEncoder[String] with
+      type ColumnType = StringType
+      def catalystType = sql.types.StringType
+    inline given stringOpt: PrimitiveNullableEncoder[String] with
+      type ColumnType = StringOptType
+      def catalystType = sql.types.StringType
 
-  trait StructEncoder[A] extends Encoder[A]:
-    type Encoded <: StructType
+    inline given byte: PrimitiveNonNullableEncoder[Byte] with
+      type ColumnType = ByteType
+      def catalystType = sql.types.ByteType
+    inline given byteOpt: PrimitiveNullableEncoder[Byte] with
+      type ColumnType = ByteOptType
+      def catalystType = sql.types.ByteType
+
+    inline given short: PrimitiveNonNullableEncoder[Short] with
+      type ColumnType = ShortType
+      def catalystType = sql.types.ShortType
+    inline given shortOpt: PrimitiveNullableEncoder[Short] with
+      type ColumnType = ShortOptType
+      def catalystType = sql.types.ShortType
+
+    inline given int: PrimitiveNonNullableEncoder[Int] with
+      type ColumnType = IntegerType
+      def catalystType = sql.types.IntegerType
+    inline given intOpt: PrimitiveNullableEncoder[Int] with
+      type ColumnType = IntegerOptType
+      def catalystType = sql.types.IntegerType
+
+    inline given long: PrimitiveNonNullableEncoder[Long] with
+      type ColumnType = LongType
+      def catalystType = sql.types.LongType
+    inline given longOpt: PrimitiveNullableEncoder[Long] with
+      type ColumnType = IntegerOptType
+      def catalystType = sql.types.LongType
+
+    inline given float: PrimitiveNonNullableEncoder[Float] with
+      type ColumnType = FloatType
+      def catalystType = sql.types.FloatType
+    inline given floatOpt: PrimitiveNullableEncoder[Float] with
+      type ColumnType = FloatOptType
+      def catalystType = sql.types.FloatType
+
+    inline given double: PrimitiveNonNullableEncoder[Double] with
+      type ColumnType = DoubleType
+      def catalystType = sql.types.DoubleType
+    inline given doubleOpt: PrimitiveNullableEncoder[Double] with
+      type ColumnType = DoubleOptType
+      def catalystType = sql.types.DoubleType
+
+    export StructEncoder.{fromMirror, optFromMirror}
+
+  trait StructEncoder[-A] extends Encoder[A]:
+    type StructSchema <: Tuple
+    type ColumnType = StructType[StructSchema]
+    override def catalystType: sql.types.StructType
+    override def encode(a: A): sql.Row
 
   object StructEncoder:
-    def getEncodedType(using quotes: Quotes)(mirroredElemLabels: Type[?], mirroredElemTypes: Type[?]): quotes.reflect.TypeRepr =
-      import quotes.reflect.*
+    type Aux[-A, E <: Tuple] = StructEncoder[A] { type StructSchema = E }
 
-      mirroredElemLabels match
-        case '[EmptyTuple] => TypeRepr.of[StructType.SNil]
-        case '[Name.Subtype[label] *: labels] => mirroredElemTypes match
-          case '[tpe *: tpes] =>
-            Expr.summon[Encoder[tpe]].getOrElse(fromMirrorImpl[tpe]) match
-              case '{ ${encoder}: Encoder.Aux[tpe, DataType.Subtype[e]] } => 
-                getEncodedType(Type.of[labels], Type.of[tpes]).asType match
-                  case '[StructType.Subtype[tail]] =>
-                    TypeRepr.of[StructType.SCons[label, e, tail]]
+    private case class ColumnInfo(
+      labelType: Type[?],
+      labelValue: String,
+      decodedType: Type[?],
+      encoder: Expr[Encoder[?]]
+    )
 
-    transparent inline given fromMirror[A](using m: Mirror.ProductOf[A]): StructEncoder[A] = ${ fromMirrorImpl[A] }
+    private def getColumnSchemaType(using quotes: Quotes)(subcolumnInfos: List[ColumnInfo]): Type[?] =
+      subcolumnInfos match
+        case Nil => Type.of[EmptyTuple]
+        case info :: tail =>
+          info.labelType match
+            case '[Name.Subtype[lt]] =>
+              info.encoder match
+                case '{ ${encoder}: Encoder.Aux[tpe, DataType.Subtype[e]] } => 
+                  getColumnSchemaType(tail) match
+                    case '[TupleSubtype[tailType]] => 
+                      Type.of[(lt := e) *: tailType]
 
-    def fromMirrorImpl[A : Type](using Quotes): Expr[StructEncoder[A]] =
-      val encodedType = Expr.summon[Mirror.Of[A]].getOrElse(throw new Exception(s"Could not find Mirror when generating encoder for ${Type.show[A]}")) match
-        case '{ ${m}: Mirror.ProductOf[A] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes } } =>
-          getEncodedType(Type.of[elementLabels], Type.of[elementTypes])
-      encodedType.asType match
-        case '[t] =>
-          '{
-            (new StructEncoder[A] {
-              override type Encoded = t
-            }): StructEncoder[A] { type Encoded = t }
+    private def getSubcolumnInfos(elemLabels: Type[?], elemTypes: Type[?])(using Quotes): List[ColumnInfo] =
+      import quotes.reflect.Select
+      elemLabels match
+        case '[EmptyTuple] => Nil
+        case '[label *: labels] =>
+          val labelValue = Type.valueOfConstant[label].get.toString
+          elemTypes match
+            case '[tpe *: types] =>
+              Expr.summon[Encoder[tpe]] match
+                case Some(encoderExpr) =>
+                  ColumnInfo(Type.of[label], labelValue, Type.of[tpe], encoderExpr) :: getSubcolumnInfos(Type.of[labels], Type.of[types])
+                case _ => quotes.reflect.report.throwError(s"Could not summon encoder for ${Type.show[tpe]}")
+
+    transparent inline given fromMirror[A]: StructEncoder[A] = ${ fromMirrorImpl[A] }
+
+    def fromMirrorImpl[A : Type](using q: Quotes): Expr[StructEncoder[A]] =
+      Expr.summon[Mirror.Of[A]].getOrElse(throw new Exception(s"Could not find Mirror when generating encoder for ${Type.show[A]}")) match
+        case '{ ${mirror}: Mirror.ProductOf[A] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes } } =>
+          val subcolumnInfos = getSubcolumnInfos(Type.of[elementLabels], Type.of[elementTypes])
+          val columnSchemaType = getColumnSchemaType(subcolumnInfos)
+
+          val structFieldExprs = subcolumnInfos.map { info =>
+            '{ sql.types.StructField(${Expr(info.labelValue)}, ${info.encoder}.catalystType, ${info.encoder}.isNullable) }
           }
+          val structFields = Expr.ofSeq(structFieldExprs)
 
+          def rowElements(value: Expr[A]) =
+            subcolumnInfos.map { info =>
+              import quotes.reflect.*
+              info.decodedType match
+                case '[t] =>
+                  '{ ${info.encoder}.asInstanceOf[Encoder[t]].encode(${ Select.unique(value.asTerm, info.labelValue).asExprOf[t] }) }
+            }
 
-trait BooleanType extends DataType
-trait StringType extends DataType
-trait IntegerType extends DataType
-trait FloatType extends DataType
-trait DoubleType extends DataType
+          def rowElementsTuple(row: Expr[sql.Row]): Expr[Tuple] =
+            val elements = subcolumnInfos.zipWithIndex.map { (info, idx) =>
+              given Quotes = q
+              '{ ${info.encoder}.decode(${row}.get(${Expr(idx)})) }
+            }
+            Expr.ofTupleFromSeq(elements)
 
+          columnSchemaType match
+            case '[TupleSubtype[t]] =>  
+              '{
+                (new StructEncoder[A] {
+                  override type StructSchema = t
+                  override def catalystType = sql.types.StructType(${ structFields })
+                  override def isNullable = false
+                  override def encode(a: A) =
+                    sql.Row.fromSeq(${ Expr.ofSeq(rowElements('a)) })
+                  override def decode(a: Any) =
+                    ${mirror}.fromTuple(${ rowElementsTuple('{a.asInstanceOf[sql.Row]}) }.asInstanceOf[elementTypes])
+                }): StructEncoder[A] { type StructSchema = t }
+              }
+    end fromMirrorImpl
 
-sealed trait StructType extends DataType
+    inline given optFromMirror[A](using encoder: StructEncoder[A]): (Encoder[Option[A]] { type ColumnType = StructOptType[encoder.StructSchema] }) =
+      new Encoder[Option[A]]:
+        override type ColumnType = StructOptType[encoder.StructSchema]
+        override def encode(value: Option[A]): Any = value.map(encoder.encode).orNull
+        override def decode(value: Any): Any = Option(encoder.decode)
+        override def catalystType = encoder.catalystType
+        override def isNullable = true
 
-object StructType:
-  object SNil extends StructType
-  type SNil = SNil.type
-  final case class SCons[N <: Name, H <: DataType, T <: StructType](headLabel: N, headTypeName: String, tail: T) extends StructType//:
+sealed class BooleanOptType extends DataType
+final class BooleanType extends BooleanOptType, DataType.NotNull
 
-  type Subtype[T <: StructType] = T
+sealed class StringOptType extends DataType
+final class StringType extends StringOptType, DataType.NotNull
 
-  type Merge[S1 <: StructType, S2 <: StructType] =
-    S1 match
-      case SNil => S2
-      case SCons[headName, headType, tail] => SCons[headName, headType, Merge[tail, S2]]
+sealed class ByteOptType extends DataType
+final class ByteType extends ByteOptType, DataType.NotNull
+
+sealed class ShortOptType extends DataType
+final class ShortType extends ShortOptType, DataType.NotNull
+
+sealed class IntegerOptType extends DataType
+final class IntegerType extends IntegerOptType, DataType.NotNull
+
+sealed class LongOptType extends DataType
+final class LongType extends LongOptType, DataType.NotNull
+
+sealed class FloatOptType extends DataType
+final class FloatType extends FloatOptType, DataType.NotNull
+
+class DoubleOptType extends DataType
+final class DoubleType extends DoubleOptType, DataType.NotNull
+
+sealed class StructOptType[Schema <: Tuple] extends DataType
+final class StructType[Schema <: Tuple] extends StructOptType[Schema], DataType.NotNull

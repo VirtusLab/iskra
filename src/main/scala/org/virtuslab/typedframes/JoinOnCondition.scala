@@ -1,29 +1,28 @@
 package org.virtuslab.typedframes
 
 import scala.quoted.*
-import scala.compiletime.{erasedValue, error}
-import org.virtuslab.typedframes.types.{BooleanType, StructType}
+import org.virtuslab.typedframes.types.BooleanOptType
 
-abstract class JoinOnCondition[MergedSchema <: FrameSchema, MergedView <: SchemaView](
+abstract class JoinOnCondition[MergedSchema, MergedView <: SchemaView](
   val left: UntypedDataFrame, val right: UntypedDataFrame, val joinType: JoinType
 ):
   val mergedView: MergedView
 
 object JoinOnCondition:
   given joinOnConditionOps: {} with
-    extension [Schema <: FrameSchema, View <: SchemaView] (joc: JoinOnCondition[Schema, View])
+    extension [Schema, View <: SchemaView] (joc: JoinOnCondition[Schema, View])
       inline def apply[ConditionColumn](conditionColumn: View ?=> ConditionColumn): DataFrame[Schema] =
         ${ applyImpl[Schema, View, ConditionColumn]('joc, 'conditionColumn) }
   
-  def applyImpl[Schema <: FrameSchema : Type, View <: SchemaView : Type, ConditionColumn : Type](
+  def applyImpl[Schema : Type, View <: SchemaView : Type, ConditionColumn : Type](
     joc: Expr[JoinOnCondition[Schema, View]],
     conditionColumn: Expr[View ?=> ConditionColumn]
   )(using Quotes): Expr[DataFrame[Schema]] =
     import quotes.reflect.*
     Type.of[ConditionColumn] match
-      case '[Column[BooleanType]] =>
+      case '[Column[BooleanOptType]] =>
         '{
-          val condition = ${ conditionColumn }(using ${ joc }.mergedView).asInstanceOf[Column[BooleanType]].untyped
+          val condition = ${ conditionColumn }(using ${ joc }.mergedView).asInstanceOf[Column[BooleanOptType]].untyped
 
           val sparkJoinType = ${ joc }.joinType match
             case JoinType.Inner => "inner"
@@ -36,7 +35,7 @@ object JoinOnCondition:
         }
 
       case '[t] =>
-        val errorMsg = s"""The parameter of `on` should be a boolean column (${Type.show[Column[BooleanType]]}) but it has type: ${Type.show[t]}"""
+        val errorMsg = s"""The parameter of `on` should be a (potentially nullable) boolean column (${Type.show[Column[BooleanOptType]]}) but it has type: ${Type.show[t]}"""
         report.errorAndAbort(errorMsg, MacroHelpers.callPosition(joc))
 
   def make[DF1 <: DataFrame[?] : Type, DF2 <: DataFrame[?] : Type](
@@ -44,7 +43,7 @@ object JoinOnCondition:
   )(using Quotes): Expr[JoinOnCondition[?, ?]] =
     import quotes.reflect.*
     mergeSchemaTypes(Type.of[DF1], Type.of[DF2]) match
-      case '[FrameSchema.TupleSubtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
+      case '[s] if FrameSchema.isValidType(Type.of[s]) =>
         val viewExpr = SchemaView.schemaViewExpr[DataFrame[s]]
         viewExpr.asTerm.tpe.asType match
           case '[SchemaView.Subtype[v]] =>

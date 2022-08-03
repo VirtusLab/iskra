@@ -9,7 +9,7 @@ object FrameSchema:
   type Merge[S1, S2] = S1 match
     case TupleSubtype[s1] => S2 match
       case TupleSubtype[s2] => Tuple.Concat[s1, s2]
-      case _ => Tuple.Append[s1, S2]
+      case _ => Tuple.Concat[s1, S2 *: EmptyTuple]
     case _ => S2 match
       case TupleSubtype[s2] => S1 *: s2
       case _ => S1 *: S2 *: EmptyTuple

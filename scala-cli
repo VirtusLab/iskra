@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+scala-cli --cli-version nightly "$@"

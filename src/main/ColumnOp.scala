@@ -4,7 +4,7 @@ import scala.quoted.*
 import org.apache.spark.sql
 import org.apache.spark.sql.functions.concat
 import org.virtuslab.typedframes.{Column as Col}
-import org.virtuslab.typedframes.Column.untypedColumnOps
+import org.virtuslab.typedframes.UntypedOps.typed
 import org.virtuslab.typedframes.types.*
 import DataType.*
 
@@ -75,6 +75,7 @@ object ColumnOp:
             (new PlusPlus[T1, T2] { type Out = t }): PlusPlus[T1, T2] { type Out = t }
           }
 
+  // TODO: Make equality multiversal but allow to compare numeric types
   trait Eq[-T1 <: DataType, -T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped === col2.untyped).typed[Out]

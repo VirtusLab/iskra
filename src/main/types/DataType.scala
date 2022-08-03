@@ -201,7 +201,7 @@ object DataType:
                   override def encode(a: A) =
                     sql.Row.fromSeq(${ Expr.ofSeq(rowElements('a)) })
                   override def decode(a: Any) =
-                    ${mirror}.fromTuple(${ rowElementsTuple('{a.asInstanceOf[sql.Row]}) }.asInstanceOf[elementTypes])
+                    ${mirror}.fromProduct(${ rowElementsTuple('{a.asInstanceOf[sql.Row]}) })
                 }): StructEncoder[A] { type StructSchema = t }
               }
     end fromMirrorImpl

@@ -3,7 +3,7 @@ package org.virtuslab.typedframes.functions
 import org.apache.spark.sql
 import org.virtuslab.typedframes.Agg
 import org.virtuslab.typedframes.{Column as Col}
-import org.virtuslab.typedframes.Column.untypedColumnOps
+import org.virtuslab.typedframes.UntypedOps.typed
 import org.virtuslab.typedframes.types.*
 import org.virtuslab.typedframes.types.DataType.{NotNull, NumericOptType}
 import scala.util.NotGiven

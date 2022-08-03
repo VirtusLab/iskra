@@ -6,4 +6,5 @@
 .metals/
 target/
 metals.sbt
-/tmp
+scala-doc
+/.tmp

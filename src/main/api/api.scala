@@ -23,10 +23,11 @@ export types.{
   StructType,
   StructOptType
 }
-export Column.untypedColumnOps
-export DataFrame.typed
+export UntypedOps.typed
 export org.virtuslab.typedframes.$
-export org.virtuslab.typedframes.{UntypedColumn, UntypedDataFrame}
+export org.virtuslab.typedframes.{Column, DataFrame, UntypedColumn, UntypedDataFrame}
 
+object functions:
+  export org.virtuslab.typedframes.functions.{lit, avg, sum}
 
 export org.apache.spark.sql.SparkSession

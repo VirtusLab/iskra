@@ -8,10 +8,6 @@ class Column[+T <: DataType](val untyped: UntypedColumn):
   inline def name(using v: ValueOf[Name]): Name = v.value
 
 object Column:
-  given untypedColumnOps: {} with
-    extension (untyped: UntypedColumn)
-      def typed[A <: DataType] = Column[A](untyped)
-
   extension [T <: DataType](col: Column[T])
     inline def as[N <: Name](name: N)(using v: ValueOf[N]): LabeledColumn[N, T] =
       LabeledColumn[N, T](col.untyped.as(v.value))

@@ -1,6 +1,6 @@
 //> using publish.organization "org.virtuslab"
 //> using publish.name "typed-frames"
-//> using publish.publish.computeVersion "git:tag"
+//> using publish.computeVersion "git:tag"
 //> using publish.url "https://github.com/VirtusLab/typed-frames"
 //> using publish.license "Apache-2.0"
 //> using publish.repository "central"

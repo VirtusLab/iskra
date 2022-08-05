@@ -1,6 +1,6 @@
 # TypedFrames
 
-TypedFrames is a Scala 3 wrapper around Spark API which allows writing typesafe and boilerplate-free but still efficient Spark code.
+TypedFrames is a Scala 3 wrapper around Apache Spark API which allows writing typesafe and boilerplate-free but still efficient Spark code.
 
 ## How is it possible to write Spark applications in Scala 3?
 
@@ -16,6 +16,80 @@ TypedFrames provides thin (but strongly typed) wrappers around `DataFrame`s, whi
 
 TypedFrames uses structural types rather than case classes as data models, which gives us a lot of flexibility (no need to explicitly define a new case class when a column is added/removed/renamed!) but we still get compilation errors when we try to refer to a column which doesn't exist or can't be used in a given context.
 
-## Building and running locally
+## Usage
 
-This project is built using [scala-cli](https://scala-cli.virtuslab.org/).
+:warning: This library is in its early stage of development - the syntax and type hierarchy might still change,
+the coverage of Spark's API is far from being complete and more tests are needed.
+
+1) Add TypedFrames as a dependency to your project, e.g.
+
+* in a file compiled with Scala CLI:
+```scala
+//> using lib "org.virtuslab::typed-frames:0.0.1"
+```
+
+* when starting Scala CLI REPL:
+```shell
+scala-cli repl --dep org.virtuslab::typed-frames:0.0.1
+```
+
+* in `build.sbt` in an sbt project:
+```scala
+libraryDependencies += "org.virtuslab" %% "typed-frames" % "0.0.1"
+```
+
+TypedFrames is built with Scala 3.1.3 so it's compatible with Scala 3.1.x and newer minor releases (starting from 3.2.0-RC1 you'll get code completions for names of columns in REPL and Metals!).
+TypedFrames transitively depends on Spark 3.2.0.
+
+2) Import the basic definitions from the API
+```scala
+import org.virtuslab.typedframes.api.*
+```
+
+3) Get a Spark session, e.g.
+```scala
+given spark: SparkSession =
+  SparkSession
+    .builder()
+    .master("local")
+    .appName("my-spark-app")
+    .getOrCreate()
+```
+
+4) Create a typed data frame in either of the two ways:
+* by using `toTypedDF` extension method on a `Seq` of case classes, e.g.
+```scala
+Seq(Foo(1, "abc"), Foo(2, "xyz")).toTypedDF
+```
+* by taking a good old (untyped) data frame and calling `typed` extension method on it with a type parameter representing a case class, e.g.
+```scala
+df.typed[Foo]
+```
+
+ In case you needed to get back to the unsafe world of untyped data frames for some reason, just call `.untyped` on a typed data frame.
+
+5) Follow your intuition of a Spark developer :wink: 
+
+This library intends to maximally resemble the original API of Spark (e.g. by using the same names of methods, etc.) where possible, although trying to make the code feel more like regular Scala without unnecessary boilerplate and adding some other syntactic improvements.
+
+Most important differences:
+* Refer to columns (also with prefixes specifying the alias for a dataframe in case of ambiguities) simply with `$.foo.bar` instead of `$"foo.bar"` or `col("foo.bar")`. Use backticks when necessary, e.g. ``$.`column with spaces` ``.
+* From inside of `.select(...)` or `.select{...}` you should return something that is a named column or a tuple of named columns. Because of how Scala syntax works you can write simply `.select($.x, $.y)` instead of `select(($.x, $.y))`. With braces you can compute intermediate values like
+```scala
+.select {
+  val sum = ($.x + $.y).as("sum")
+  ($.x, $.y, sum)
+}
+```
+*  Syntax for joins looks slightly more like SQL, but with dots and parentheses as for usual method calls, e.g.
+```scala
+foos.innerJoin(bars).on($.foos.barId === $.bars.id).select(...)
+```
+* As you might have noticed above, the aliases for `foos` and `bars` were automatically inferred
+
+6) For reference look at the [examples](src/test/example/) and the [API docs](https://virtuslab.github.io/typed-frames/) 
+
+## Local development
+
+
+This project is built using [scala-cli](https://scala-cli.virtuslab.org/) so just use the traditional commands with `.` as root like `scala-cli compile .` or `scala-cli test .`.

@@ -1,6 +1,6 @@
 # Iskra
 
-TypedFrames is a Scala 3 wrapper around Apache Spark API which allows writing typesafe and boilerplate-free but still efficient Spark code.
+Iskra is a Scala 3 wrapper around Apache Spark API which allows writing typesafe and boilerplate-free but still efficient Spark code.
 
 ## How is it possible to write Spark applications in Scala 3?
 

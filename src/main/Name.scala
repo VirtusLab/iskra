@@ -1,4 +1,4 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 type Name = String & Singleton
 object Name:

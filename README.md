@@ -12,7 +12,7 @@ Iskra tries to work around this problem by using its own encoders (unrelated to 
 
 ## How does Iskra make things typesafe and efficient at the same time?
 
-TypedFrames provides thin (but strongly typed) wrappers around `DataFrame`s, which track types and names of columns at compile time but let Catalyst perform all of its optimizations at runtime.
+Iskra provides thin (but strongly typed) wrappers around `DataFrame`s, which track types and names of columns at compile time but let Catalyst perform all of its optimizations at runtime.
 
 Iskra uses structural types rather than case classes as data models, which gives us a lot of flexibility (no need to explicitly define a new case class when a column is added/removed/renamed!) but we still get compilation errors when we try to refer to a column which doesn't exist or can't be used in a given context.
 

@@ -1,4 +1,4 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 import scala.quoted._
 import org.apache.spark.sql.functions.col

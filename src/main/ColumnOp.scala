@@ -1,11 +1,11 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 import scala.quoted.*
 import org.apache.spark.sql
 import org.apache.spark.sql.functions.concat
-import org.virtuslab.typedframes.{Column as Col}
-import org.virtuslab.typedframes.UntypedOps.typed
-import org.virtuslab.typedframes.types.*
+import org.virtuslab.iskra.{Column as Col}
+import org.virtuslab.iskra.UntypedOps.typed
+import org.virtuslab.iskra.types.*
 import DataType.*
 
 object ColumnOp:

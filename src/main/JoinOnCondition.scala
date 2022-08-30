@@ -1,7 +1,7 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 import scala.quoted.*
-import org.virtuslab.typedframes.types.BooleanOptType
+import org.virtuslab.iskra.types.BooleanOptType
 
 abstract class JoinOnCondition[MergedSchema, MergedView <: SchemaView](
   val left: UntypedDataFrame, val right: UntypedDataFrame, val joinType: JoinType

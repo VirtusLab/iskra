@@ -1,10 +1,10 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 import scala.quoted._
 import org.apache.spark.sql
 import org.apache.spark.sql.SparkSession
-import org.virtuslab.typedframes.DataFrame
-import org.virtuslab.typedframes.types.{DataType, StructType}
+import org.virtuslab.iskra.DataFrame
+import org.virtuslab.iskra.types.{DataType, StructType}
 import DataType.{Encoder, StructEncoder, PrimitiveEncoder}
 
 object DataFrameBuilders:

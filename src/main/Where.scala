@@ -1,9 +1,9 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 import scala.quoted.*
 import scala.annotation.implicitNotFound
 
-import org.virtuslab.typedframes.types.BooleanOptType
+import org.virtuslab.iskra.types.BooleanOptType
 
 trait Where[Schema, View <: SchemaView]:
   val view: View

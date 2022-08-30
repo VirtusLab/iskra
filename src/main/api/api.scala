@@ -1,4 +1,4 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 package api
 
 export DataFrameBuilders.toTypedDF
@@ -24,11 +24,11 @@ export types.{
   StructOptType
 }
 export UntypedOps.typed
-export org.virtuslab.typedframes.$
-export org.virtuslab.typedframes.{Column, DataFrame, UntypedColumn, UntypedDataFrame}
+export org.virtuslab.iskra.$
+export org.virtuslab.iskra.{Column, DataFrame, UntypedColumn, UntypedDataFrame}
 
 object functions:
-  export org.virtuslab.typedframes.functions.lit
-  export org.virtuslab.typedframes.functions.Aggregates.*
+  export org.virtuslab.iskra.functions.lit
+  export org.virtuslab.iskra.functions.Aggregates.*
 
 export org.apache.spark.sql.SparkSession

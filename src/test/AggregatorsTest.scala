@@ -1,7 +1,7 @@
-package org.virtuslab.typedframes.test
+package org.virtuslab.iskra.test
 
 class AggregatorsTest extends SparkUnitTest("AggregatorsTest"):
-  import org.virtuslab.typedframes.api.*
+  import org.virtuslab.iskra.api.*
   import functions.*
 
   case class Foo(string: String, int: Int, intOpt: Option[Int], float: Float, floatOpt: Option[Float])

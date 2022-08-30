@@ -1,11 +1,11 @@
-package org.virtuslab.typedframes.functions
+package org.virtuslab.iskra.functions
 
 import org.apache.spark.sql
-import org.virtuslab.typedframes.Agg
-import org.virtuslab.typedframes.Column
-import org.virtuslab.typedframes.UntypedOps.typed
-import org.virtuslab.typedframes.types.*
-import org.virtuslab.typedframes.types.DataType.{NumericOptType, Nullable}
+import org.virtuslab.iskra.Agg
+import org.virtuslab.iskra.Column
+import org.virtuslab.iskra.UntypedOps.typed
+import org.virtuslab.iskra.types.*
+import org.virtuslab.iskra.types.DataType.{NumericOptType, Nullable}
 
 class Sum[A <: Agg](val agg: A):
   def apply[T <: NumericOptType](column: agg.View ?=> Column[T]): Column[Nullable[T]] =

@@ -13,137 +13,205 @@ object ColumnOp:
     type Out <: DataType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped + col2.untyped).typed[Out]
   object Plus:
-    transparent inline given numeric[T1 <: NumericOptType, T2 <: NumericOptType]: Plus[T1, T2] = ${ numericImpl[T1, T2] }
-    private def numericImpl[T1 <: NumericOptType : Type, T2  <: NumericOptType : Type](using Quotes) =
-      DataType.commonNumericType[T1, T2] match
-        case '[t] =>
-          '{
-            (new Plus[T1, T2] { type Out = t }): Plus[T1, T2] { type Out = t }
-          }
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Plus[T1, T2] with
+      type Out = DataType.CommonNumericNonNullableType[T1, T2]
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Plus[T1, T2] with
+      type Out = DataType.CommonNumericOptType[T1, T2]
 
   trait Minus[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped - col2.untyped).typed[Out]
   object Minus:
-    transparent inline given numeric[T1 <: NumericOptType, T2 <: NumericOptType]: Minus[T1, T2] = ${ numericImpl[T1, T2] }
-    private def numericImpl[T1 <: NumericOptType : Type, T2  <: NumericOptType : Type](using Quotes) =
-      DataType.commonNumericType[T1, T2] match
-        case '[t] =>
-          '{
-            (new Minus[T1, T2] { type Out = t }): Minus[T1, T2] { type Out = t }
-          }
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Minus[T1, T2] with
+      type Out = DataType.CommonNumericNonNullableType[T1, T2]
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Minus[T1, T2] with
+      type Out = DataType.CommonNumericOptType[T1, T2]
 
   trait Mult[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped * col2.untyped).typed[Out]
   object Mult:
-    transparent inline given numeric[T1 <: NumericOptType, T2 <: NumericOptType]: Mult[T1, T2] = ${ numericImpl[T1, T2] }
-    private def numericImpl[T1 <: NumericOptType : Type, T2  <: NumericOptType : Type](using Quotes) =
-      DataType.commonNumericType[T1, T2] match
-        case '[t] =>
-          '{
-            (new Mult[T1, T2] { type Out = t }): Mult[T1, T2] { type Out = t }
-          }
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Mult[T1, T2] with
+      type Out = DataType.CommonNumericNonNullableType[T1, T2]
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Mult[T1, T2] with
+      type Out = DataType.CommonNumericOptType[T1, T2]
 
   trait Div[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped / col2.untyped).typed[Out]
   object Div:
-    transparent inline given numeric[T1 <: NumericOptType, T2 <: NumericOptType]: Div[T1, T2] = ${ numericImpl[T1, T2] }
-    private def numericImpl[T1 <: NumericOptType : Type, T2  <: NumericOptType : Type](using Quotes) =
-      val outType = Type.of[(T1, T2)] match
-        case '[(NotNull, NotNull)] => Type.of[DoubleType]
-        case _ => Type.of[DoubleOptType]
-      outType match
-        case '[t] =>
-          '{
-            (new Div[T1, T2] { type Out = t }): Div[T1, T2] { type Out = t }
-          }
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Div[T1, T2] with
+      type Out = DoubleType
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Div[T1, T2] with
+      type Out = DoubleOptType
 
   trait PlusPlus[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = concat(col1.untyped, col2.untyped).typed[Out]
   object PlusPlus:
-    transparent inline given string[T1 <: StringOptType, T2 <: StringOptType]: PlusPlus[T1, T2] = ${ stringImpl[T1, T2] }
-    private def stringImpl[T1 <: StringOptType : Type, T2  <: StringOptType : Type](using Quotes) =
-      val outType = Type.of[(T1, T2)] match
-        case '[(NotNull, NotNull)] => Type.of[StringType]
-        case _ => Type.of[StringOptType]
-      outType match
-        case '[t] =>
-          '{
-            (new PlusPlus[T1, T2] { type Out = t }): PlusPlus[T1, T2] { type Out = t }
-          }
+    given stringNonNullable: PlusPlus[StringType, StringType] with
+      type Out = StringType
+    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Div[T1, T2] with
+      type Out = StringOptType
 
-  // TODO: Make equality multiversal but allow to compare numeric types
-  trait Eq[-T1 <: DataType, -T2 <: DataType]:
+  trait Eq[T1 <: DataType, T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped === col2.untyped).typed[Out]
   object Eq:
-    given nonNullable[T <: NotNull]: Eq[T, T] with
+    given booleanNonNullable: Eq[BooleanType, BooleanType] with
       type Out = BooleanType
-    given nullable[T <: DataType]: Eq[T, T] with
+    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Eq[T1, T2] with
+      type Out = BooleanOptType
+    
+    given stringNonNullable: Eq[StringType, StringType] with
+      type Out = BooleanType
+    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Eq[T1, T2] with
+      type Out = BooleanOptType
+
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Eq[T1, T2] with
+      type Out = BooleanType
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Eq[T1, T2] with
+      type Out = BooleanOptType
+
+    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Eq[StructType[S1], StructType[S2]] with
+      type Out = BooleanType
+    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Eq[T1, T2] with
       type Out = BooleanOptType
 
   trait Ne[-T1 <: DataType, -T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped =!= col2.untyped).typed[Out]
   object Ne:
-    given nonNullable[T <: NotNull]: Ne[T, T] with
+    given booleanNonNullable: Ne[BooleanType, BooleanType] with
       type Out = BooleanType
-    given nullable[T <: DataType]: Ne[T, T] with
+    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Ne[T1, T2] with
+      type Out = BooleanOptType
+    
+    given stringNonNullable: Ne[StringType, StringType] with
+      type Out = BooleanType
+    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Ne[T1, T2] with
+      type Out = BooleanOptType
+
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Ne[T1, T2] with
+      type Out = BooleanType
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Ne[T1, T2] with
+      type Out = BooleanOptType
+
+    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Ne[StructType[S1], StructType[S2]] with
+      type Out = BooleanType
+    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Ne[T1, T2] with
       type Out = BooleanOptType
 
   trait Lt[-T1 <: DataType, -T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped < col2.untyped).typed[Out]
   object Lt:
-    given nonNullable[T <: NotNull]: Lt[T, T] with
+    given booleanNonNullable: Lt[BooleanType, BooleanType] with
       type Out = BooleanType
-    given nullable[T <: DataType]: Lt[T, T] with
+    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Lt[T1, T2] with
+      type Out = BooleanOptType
+    
+    given stringNonNullable: Lt[StringType, StringType] with
+      type Out = BooleanType
+    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Lt[T1, T2] with
+      type Out = BooleanOptType
+
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Lt[T1, T2] with
+      type Out = BooleanType
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Lt[T1, T2] with
+      type Out = BooleanOptType
+
+    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Lt[StructType[S1], StructType[S2]] with
+      type Out = BooleanType
+    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Lt[T1, T2] with
       type Out = BooleanOptType
 
   trait Le[-T1 <: DataType, -T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped <= col2.untyped).typed[Out]
   object Le:
-    given nonNullable[T <: NotNull]: Le[T, T] with
+    given booleanNonNullable: Le[BooleanType, BooleanType] with
       type Out = BooleanType
-    given nullable[T <: DataType]: Le[T, T] with
+    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Le[T1, T2] with
+      type Out = BooleanOptType
+    
+    given stringNonNullable: Le[StringType, StringType] with
+      type Out = BooleanType
+    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Le[T1, T2] with
+      type Out = BooleanOptType
+
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Le[T1, T2] with
+      type Out = BooleanType
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Le[T1, T2] with
+      type Out = BooleanOptType
+
+    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Le[StructType[S1], StructType[S2]] with
+      type Out = BooleanType
+    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Le[T1, T2] with
       type Out = BooleanOptType
 
   trait Gt[-T1 <: DataType, -T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped > col2.untyped).typed[Out]
   object Gt:
-    given nonNullable[T <: NotNull]: Gt[T, T] with
+    given booleanNonNullable: Gt[BooleanType, BooleanType] with
       type Out = BooleanType
-    given nullable[T <: DataType]: Gt[T, T] with
+    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Gt[T1, T2] with
+      type Out = BooleanOptType
+    
+    given stringNonNullable: Gt[StringType, StringType] with
+      type Out = BooleanType
+    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Gt[T1, T2] with
+      type Out = BooleanOptType
+
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Gt[T1, T2] with
+      type Out = BooleanType
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Gt[T1, T2] with
+      type Out = BooleanOptType
+
+    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Gt[StructType[S1], StructType[S2]] with
+      type Out = BooleanType
+    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Gt[T1, T2] with
       type Out = BooleanOptType
 
   trait Ge[-T1 <: DataType, -T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped >= col2.untyped).typed[Out]
   object Ge:
-    given nonNullable[T <: NotNull]: Ge[T, T] with
+    given booleanNonNullable: Ge[BooleanType, BooleanType] with
       type Out = BooleanType
-    given nullable[T <: DataType]: Ge[T, T] with
+    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Ge[T1, T2] with
+      type Out = BooleanOptType
+    
+    given stringNonNullable: Ge[StringType, StringType] with
+      type Out = BooleanType
+    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Ge[T1, T2] with
+      type Out = BooleanOptType
+
+    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Ge[T1, T2] with
+      type Out = BooleanType
+    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Ge[T1, T2] with
+      type Out = BooleanOptType
+
+    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Ge[StructType[S1], StructType[S2]] with
+      type Out = BooleanType
+    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Ge[T1, T2] with
       type Out = BooleanOptType
 
   trait And[-T1 <: DataType, -T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped && col2.untyped).typed[Out]
   object And:
-    given nonNullable[T <: NotNull]: And[T, T] with
+    given booleanNonNullable: And[BooleanType, BooleanType] with
       type Out = BooleanType
-    given nullable[T <: DataType]: And[T, T] with
+    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: And[T1, T2] with
       type Out = BooleanOptType
 
   trait Or[-T1 <: DataType, -T2 <: DataType]:
     type Out <: BooleanOptType
     def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped || col2.untyped).typed[Out]
   object Or:
-    given nonNullable[T <: NotNull]: Or[T, T] with
+    given booleanNonNullable: Or[BooleanType, BooleanType] with
       type Out = BooleanType
-    given nullable[T <: DataType]: Or[T, T] with
+    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Or[T1, T2] with
       type Out = BooleanOptType

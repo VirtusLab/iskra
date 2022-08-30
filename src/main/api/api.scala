@@ -28,6 +28,7 @@ export org.virtuslab.typedframes.$
 export org.virtuslab.typedframes.{Column, DataFrame, UntypedColumn, UntypedDataFrame}
 
 object functions:
-  export org.virtuslab.typedframes.functions.{lit, avg, sum}
+  export org.virtuslab.typedframes.functions.lit
+  export org.virtuslab.typedframes.functions.Aggregates.*
 
 export org.apache.spark.sql.SparkSession

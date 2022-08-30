@@ -2,14 +2,29 @@ package org.virtuslab.typedframes.functions
 
 import org.apache.spark.sql
 import org.virtuslab.typedframes.Agg
-import org.virtuslab.typedframes.{Column as Col}
+import org.virtuslab.typedframes.Column
 import org.virtuslab.typedframes.UntypedOps.typed
 import org.virtuslab.typedframes.types.*
-import org.virtuslab.typedframes.types.DataType.{NotNull, NumericOptType}
-import scala.util.NotGiven
+import org.virtuslab.typedframes.types.DataType.{NumericOptType, Nullable}
 
-def avg(using agg: Agg)(colFun: agg.View ?=> Col[NumericOptType]): Col[DoubleOptType] =
-  sql.functions.avg(colFun(using agg.view).untyped).typed
+class Sum[A <: Agg](val agg: A):
+  def apply[T <: NumericOptType](column: agg.View ?=> Column[T]): Column[Nullable[T]] =
+    sql.functions.sum(column(using agg.view).untyped).typed
 
-def sum[T <: NumericOptType](using agg: Agg, isNullable: NotGiven[T <:< NotNull])(colFun: agg.View ?=> Col[T]): Col[T] =
-  sql.functions.avg(colFun(using agg.view).untyped).typed
+class Max[A <: Agg](val agg: A):
+  def apply[T <: NumericOptType](column: agg.View ?=> Column[T]): Column[Nullable[T]] =
+    sql.functions.max(column(using agg.view).untyped).typed
+
+class Min[A <: Agg](val agg: A):
+  def apply[T <: NumericOptType](column: agg.View ?=> Column[T]): Column[Nullable[T]] =
+    sql.functions.min(column(using agg.view).untyped).typed
+
+class Avg[A <: Agg](val agg: A):
+  def apply(column: agg.View ?=> Column[NumericOptType]): Column[DoubleOptType] =
+    sql.functions.avg(column(using agg.view).untyped).typed
+
+object Aggregates:
+  def sum(using agg: Agg): Sum[agg.type] = new Sum(agg)
+  def max(using agg: Agg): Max[agg.type] = new Max(agg)
+  def min(using agg: Agg): Min[agg.type] = new Min(agg)
+  def avg(using agg: Agg): Avg[agg.type] = new Avg(agg)

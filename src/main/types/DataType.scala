@@ -16,30 +16,43 @@ object DataType:
   type NumericType = ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType
   type NumericOptType = ByteOptType | ShortOptType | IntegerOptType | LongOptType | FloatOptType | DoubleOptType
 
-  def asNotNull(t: Type[?])(using Quotes) = t match
-    case '[BooleanOptType] => Type.of[BooleanType]
-    case '[StringOptType] => Type.of[StringType]
-    case '[ByteOptType] => Type.of[ByteType]
-    case '[ShortOptType] => Type.of[ShortType]
-    case '[IntegerOptType] => Type.of[IntegerType]
-    case '[LongOptType] => Type.of[LongType]
-    case '[FloatOptType] => Type.of[FloatType]
-    case '[DoubleOptType] => Type.of[DoubleType]
-    case '[StructOptType[schema]] => Type.of[StructType[schema]]
+  type Nullable[T <: DataType] <: DataType = T match
+    case BooleanOptType => BooleanOptType
+    case StringOptType => StringOptType
+    case ByteOptType => ByteOptType
+    case ShortOptType => ShortOptType
+    case IntegerOptType => IntegerOptType
+    case LongOptType => LongOptType
+    case FloatOptType => FloatOptType
+    case DoubleOptType => DoubleOptType
+    case StructOptType[schema] => StructOptType[schema]
 
-  def commonNumericType[T1 : Type, T2 : Type](using Quotes) = 
-    val notNull = Type.of[(T1, T2)] match
-      case '[(NotNull, NotNull)] => true
-      case _ => false
-    val baseType = Type.of[(T1, T2)] match
-      case '[(DoubleOptType, ?)] | '[(?, DoubleOptType)] => Type.of[DoubleOptType]
-      case '[(FloatOptType, ?)] | '[(?, FloatOptType)] => Type.of[FloatOptType]
-      case '[(LongOptType, ?)] | '[(?, LongOptType)] => Type.of[LongOptType]
-      case '[(IntegerOptType, ?)] | '[(?, IntegerOptType)] => Type.of[IntegerOptType]
-      case '[(ShortOptType, ?)] | '[(?, ShortOptType)] => Type.of[ShortOptType]
-      case '[(ByteOptType, ?)] | '[(?, ByteOptType)] => Type.of[ByteOptType]
+  type NonNullable[T <: DataType] <: DataType = T match
+    case BooleanOptType => BooleanType
+    case StringOptType => StringType
+    case ByteOptType => ByteType
+    case ShortOptType => ShortOptType
+    case IntegerOptType => IntegerOptType
+    case LongOptType => LongOptType
+    case FloatOptType => FloatOptType
+    case DoubleOptType => DoubleOptType
+    case StructOptType[schema] => StructOptType[schema]
 
-      if notNull then asNotNull(baseType) else baseType
+  type CommonNumericOptType[T1 <: DataType, T2 <: DataType] <: NumericOptType = (T1, T2) match
+    case (DoubleOptType, _) | (_, DoubleOptType) => DoubleOptType
+    case (FloatOptType, _) | (_, FloatOptType) => FloatOptType
+    case (LongOptType, _) | (_, LongOptType) => LongOptType
+    case (IntegerOptType, _) | (_, IntegerOptType) => IntegerOptType
+    case (ShortOptType, _) | (_, ShortOptType) => ShortOptType
+    case (ByteOptType, _) | (_, ByteOptType) => ByteOptType
+
+  type CommonNumericNonNullableType[T1 <: DataType, T2 <: DataType] <: NumericOptType = (T1, T2) match
+    case (DoubleOptType, _) | (_, DoubleOptType) => DoubleType
+    case (FloatOptType, _) | (_, FloatOptType) => FloatType
+    case (LongOptType, _) | (_, LongOptType) => LongType
+    case (IntegerOptType, _) | (_, IntegerOptType) => IntegerType
+    case (ShortOptType, _) | (_, ShortOptType) => ShortType
+    case (ByteOptType, _) | (_, ByteOptType) => ByteType
 
   trait Encoder[-A]:
     type ColumnType <: DataType
@@ -214,29 +227,31 @@ object DataType:
         override def catalystType = encoder.catalystType
         override def isNullable = true
 
+import DataType.NotNull
+
 sealed class BooleanOptType extends DataType
-final class BooleanType extends BooleanOptType, DataType.NotNull
+final class BooleanType extends BooleanOptType, NotNull
 
 sealed class StringOptType extends DataType
-final class StringType extends StringOptType, DataType.NotNull
+final class StringType extends StringOptType, NotNull
 
 sealed class ByteOptType extends DataType
-final class ByteType extends ByteOptType, DataType.NotNull
+final class ByteType extends ByteOptType, NotNull
 
 sealed class ShortOptType extends DataType
-final class ShortType extends ShortOptType, DataType.NotNull
+final class ShortType extends ShortOptType, NotNull
 
 sealed class IntegerOptType extends DataType
-final class IntegerType extends IntegerOptType, DataType.NotNull
+final class IntegerType extends IntegerOptType, NotNull
 
 sealed class LongOptType extends DataType
-final class LongType extends LongOptType, DataType.NotNull
+final class LongType extends LongOptType, NotNull
 
 sealed class FloatOptType extends DataType
-final class FloatType extends FloatOptType, DataType.NotNull
+final class FloatType extends FloatOptType, NotNull
 
 class DoubleOptType extends DataType
-final class DoubleType extends DoubleOptType, DataType.NotNull
+final class DoubleType extends DoubleOptType, NotNull
 
 sealed class StructOptType[Schema <: Tuple] extends DataType
-final class StructType[Schema <: Tuple] extends StructOptType[Schema], DataType.NotNull
+final class StructType[Schema <: Tuple] extends StructOptType[Schema], NotNull

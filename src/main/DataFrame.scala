@@ -12,31 +12,32 @@ object DataFrame:
   export Select.dataFrameSelectOps
   export Join.dataFrameJoinOps
   export GroupBy.dataFrameGroupByOps
+  export Where.dataFrameWhereOps
 
   type Subtype[T <: DataFrame[?]] = T
   type WithAlias[T <: String & Singleton] = DataFrame[?] { type Alias = T }
 
-  extension [S](tdf: DataFrame[S])
-    transparent inline def as(inline frameName: Name): DataFrame[?] = ${ aliasImpl('tdf, 'frameName) }
-    transparent inline def alias(inline frameName: Name): DataFrame[?] = ${ aliasImpl('tdf, 'frameName) }
+  extension [S](df: DataFrame[S])
+    transparent inline def as(inline frameName: Name): DataFrame[?] = ${ aliasImpl('df, 'frameName) }
+    transparent inline def alias(inline frameName: Name): DataFrame[?] = ${ aliasImpl('df, 'frameName) }
 
-  private def aliasImpl[S : Type](tdf: Expr[DataFrame[S]], frameName: Expr[String])(using Quotes) =
+  private def aliasImpl[S : Type](df: Expr[DataFrame[S]], frameName: Expr[String])(using Quotes) =
     import quotes.reflect.*
     ConstantType(StringConstant(frameName.valueOrAbort)).asType match
       case '[Name.Subtype[n]] =>
         FrameSchema.reownType[n](Type.of[S]) match
           case '[reowned] => '{
-            new DataFrame[reowned](${ tdf }.untyped.alias(${ frameName })):
+            new DataFrame[reowned](${ df }.untyped.alias(${ frameName })):
               type Alias = n
           }
 
   given dataFrameOps: {} with
-    extension [S](tdf: DataFrame[S])
-      inline def show(): Unit = tdf.untyped.show()
+    extension [S](df: DataFrame[S])
+      inline def show(): Unit = df.untyped.show()
 
-    extension [S](tdf: DataFrame[S])
+    extension [S](df: DataFrame[S])
       inline def collectAs[A]: List[A] =
-        ${ collectAsImpl[S, A]('tdf) }
+        ${ collectAsImpl[S, A]('df) }
 
   private type AsTuple[A] = A match
     case Tuple => A
@@ -69,7 +70,7 @@ object DataFrame:
               fromDataType[dataType]
             case '[(label := dataType) *: EmptyTuple] =>
               fromDataType[dataType]
-      case _ => quotes.reflect.report.throwError(s"Could not summon encoder for ${Type.show[A]}")
+      case _ => quotes.reflect.report.errorAndAbort(s"Could not summon encoder for ${Type.show[A]}")
     
   private def allColumns(schemaType: Type[?])(using Quotes): Seq[Type[?]] =
     schemaType match

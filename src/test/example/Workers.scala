@@ -38,9 +38,10 @@ import functions.lit
     .select {
       val salary = (lit(4732) + $.subordinates.yearsInCompany * lit(214)).as("salary")
       val supervisor = ($.supervisors.firstName ++ lit(" ") ++ $.supervisors.lastName).as("supervisor")
-
       ($.subordinates.firstName, $.subordinates.lastName, supervisor, salary)
-    }.show()
+    }
+    .where($.salary > lit(5000))
+    .show()
 
   spark.stop()
 
@@ -63,9 +64,7 @@ class ExampleTest extends AnyFunSuite:
                       ||  Natalie|   Evans|Michael Johnson|  5588|
                       ||    Alice|  Potter|Michael Johnson|  5588|
                       ||      Bob|   Smith|Michael Johnson|  6444|
-                      ||     John|  Parker|   Alice Potter|  4946|
                       ||    Julia|  Taylor|  Natalie Evans|  5374|
-                      ||   Daniel|   Jones|   Julia Taylor|  4946|
                       ||     Paul|  Wilson|   Julia Taylor|  5374|
                       |+---------+--------+---------------+------+
                       |

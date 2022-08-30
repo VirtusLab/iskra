@@ -4,18 +4,11 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers.shouldEqual
 
-class OperatorsTest extends AnyFunSuite, BeforeAndAfterAll:
+class OperatorsTest extends SparkUnitTest("OperatorsTest"):
   import org.virtuslab.typedframes.api.*
 
   case class Foo(boolean: Boolean, string: String, byte: Byte, short: Short, int: Int, long: Long, float: Float, double: Double)
   case class Bar(int: Int, intSome: Option[Int], intNone: Option[Int])
-
-  given spark: SparkSession =
-    SparkSession
-      .builder()
-      .master("local")
-      .appName("Types test")
-      .getOrCreate()
 
   val foos = Seq(
     Foo(true, "abc", 1, 2, 3, 4, 5.0, 6.0)
@@ -24,9 +17,6 @@ class OperatorsTest extends AnyFunSuite, BeforeAndAfterAll:
   val bars = Seq(
     Bar(1, Some(10), None),
   ).toTypedDF
-
-  override def afterAll() =
-    spark.stop()
 
   test("plus") {
     val result = foos.select(
@@ -205,7 +195,6 @@ class OperatorsTest extends AnyFunSuite, BeforeAndAfterAll:
 
     result shouldEqual Seq(true)
   }
-
 
   test("plus nullable") {
     val result = bars.select(

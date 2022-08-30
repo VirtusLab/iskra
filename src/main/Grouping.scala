@@ -1,7 +1,7 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 import scala.quoted.*
-import org.virtuslab.typedframes.types.DataType
+import org.virtuslab.iskra.types.DataType
 import MacroHelpers.TupleSubtype
 
 class GroupBy[View <: SchemaView](val view: View, val underlying: UntypedDataFrame)

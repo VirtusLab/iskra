@@ -1,4 +1,4 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 package types
 
 import scala.quoted._

@@ -1,8 +1,8 @@
-package org.virtuslab.typedframes.test
+package org.virtuslab.iskra.test
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.BeforeAndAfterAll
-import org.virtuslab.typedframes.api.*
+import org.virtuslab.iskra.api.*
 
 abstract class SparkUnitTest(suiteName: String) extends AnyFunSuite, BeforeAndAfterAll:
   given spark: SparkSession =

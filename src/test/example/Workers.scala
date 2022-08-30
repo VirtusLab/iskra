@@ -1,6 +1,6 @@
-package org.virtuslab.typedframes.example.workers
+package org.virtuslab.iskra.example.workers
 
-import org.virtuslab.typedframes.api.*
+import org.virtuslab.iskra.api.*
 import functions.lit
 
 @main def runExample(): Unit =

@@ -1,8 +1,8 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 import scala.quoted.*
 
-private[typedframes] object MacroHelpers:
+private[iskra] object MacroHelpers:
   def callPosition(ownerExpr: Expr[?])(using Quotes): quotes.reflect.Position =
     import quotes.reflect.*
     val file = Position.ofMacroExpansion.sourceFile

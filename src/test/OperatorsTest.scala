@@ -1,11 +1,11 @@
-package org.virtuslab.typedframes.test
+package org.virtuslab.iskra.test
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers.shouldEqual
 
 class OperatorsTest extends SparkUnitTest("OperatorsTest"):
-  import org.virtuslab.typedframes.api.*
+  import org.virtuslab.iskra.api.*
 
   case class Foo(boolean: Boolean, string: String, byte: Byte, short: Short, int: Int, long: Long, float: Float, double: Double)
   case class Bar(int: Int, intSome: Option[Int], intNone: Option[Int])

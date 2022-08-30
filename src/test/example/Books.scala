@@ -1,6 +1,6 @@
-package org.virtuslab.typedframes.example.books
+package org.virtuslab.iskra.example.books
 
-import org.virtuslab.typedframes.api.*
+import org.virtuslab.iskra.api.*
 
 @main def runExample(dataFilePath: String): Unit =
   given spark: SparkSession = {

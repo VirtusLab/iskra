@@ -1,6 +1,6 @@
-package org.virtuslab.typedframes.example.countries
+package org.virtuslab.iskra.example.countries
 
-import org.virtuslab.typedframes.api.*
+import org.virtuslab.iskra.api.*
 import functions.avg
 
 @main def runExample(): Unit =

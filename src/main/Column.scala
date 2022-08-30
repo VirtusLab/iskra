@@ -1,4 +1,4 @@
-package org.virtuslab.typedframes
+package org.virtuslab.iskra
 
 import org.apache.spark.sql.{ Column => UntypedColumn}
 import types.DataType

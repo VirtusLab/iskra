@@ -174,7 +174,7 @@ object DataType:
               Expr.summon[Encoder[tpe]] match
                 case Some(encoderExpr) =>
                   ColumnInfo(Type.of[label], labelValue, Type.of[tpe], encoderExpr) :: getSubcolumnInfos(Type.of[labels], Type.of[types])
-                case _ => quotes.reflect.report.throwError(s"Could not summon encoder for ${Type.show[tpe]}")
+                case _ => quotes.reflect.report.errorAndAbort(s"Could not summon encoder for ${Type.show[tpe]}")
 
     transparent inline given fromMirror[A]: StructEncoder[A] = ${ fromMirrorImpl[A] }
 

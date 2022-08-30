@@ -9,8 +9,8 @@ trait Select[View <: SchemaView]:
 
 object Select:
   given dataFrameSelectOps: {} with
-    extension [DF <: DataFrame[?]](tdf: DF)
-      transparent inline def select: Select[?] = ${ Select.selectImpl[DF]('{tdf}) }
+    extension [DF <: DataFrame[?]](df: DF)
+      transparent inline def select: Select[?] = ${ Select.selectImpl[DF]('{df}) }
 
   given selectApply: {} with
     extension [View <: SchemaView](select: Select[View])
@@ -40,7 +40,7 @@ object Select:
         val errorMsg = s"""The parameter of `select` should be a named column (e.g. of type: "foo" := StringType) or a tuple of named columns but it has type: ${Type.show[t]}"""
         report.errorAndAbort(errorMsg, MacroHelpers.callPosition(select))
 
-  def selectImpl[DF <: DataFrame[?] : Type](tdf: Expr[DF])(using Quotes): Expr[Select[?]] =
+  def selectImpl[DF <: DataFrame[?] : Type](df: Expr[DF])(using Quotes): Expr[Select[?]] =
     import quotes.reflect.asTerm
     val viewExpr = SchemaView.schemaViewExpr[DF]
     viewExpr.asTerm.tpe.asType match
@@ -48,6 +48,6 @@ object Select:
         '{
           new Select[v] {
             val view = ${ viewExpr }.asInstanceOf[v]
-            def underlying = ${ tdf }.untyped
+            def underlying = ${ df }.untyped
           }
         }

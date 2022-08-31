@@ -25,17 +25,17 @@ the coverage of Spark's API is far from being complete and more tests are needed
 
 * in a file compiled with Scala CLI:
 ```scala
-//> using lib "org.virtuslab::iskra:0.0.1"
+//> using lib "org.virtuslab::iskra:0.0.2"
 ```
 
 * when starting Scala CLI REPL:
 ```shell
-scala-cli repl --dep org.virtuslab::iskra:0.0.1
+scala-cli repl --dep org.virtuslab::iskra:0.0.2
 ```
 
 * in `build.sbt` in an sbt project:
 ```scala
-libraryDependencies += "org.virtuslab" %% "iskra" % "0.0.1"
+libraryDependencies += "org.virtuslab" %% "iskra" % "0.0.2"
 ```
 
 Iskra is built with Scala 3.1.3 so it's compatible with Scala 3.1.x and newer minor releases (starting from 3.2.0-RC1 you'll get code completions for names of columns in REPL and Metals!).

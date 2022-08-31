@@ -1,0 +1,20 @@
+name: Run CI
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup coursier cache
+        uses: coursier/cache-action@v6.3
+      - name: Setup scala-cli
+        uses: VirtusLab/scala-cli-setup@v0.1
+      - name: Run tests
+        run: scala-cli test . --jvm temurin:11

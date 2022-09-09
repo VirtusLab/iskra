@@ -116,7 +116,7 @@ object DataType:
       type ColumnType = LongType
       def catalystType = sql.types.LongType
     inline given longOpt: PrimitiveNullableEncoder[Long] with
-      type ColumnType = IntegerOptType
+      type ColumnType = LongOptType
       def catalystType = sql.types.LongType
 
     inline given float: PrimitiveNonNullableEncoder[Float] with

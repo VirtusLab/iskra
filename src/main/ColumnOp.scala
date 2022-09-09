@@ -51,7 +51,7 @@ object ColumnOp:
   object PlusPlus:
     given stringNonNullable: PlusPlus[StringType, StringType] with
       type Out = StringType
-    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Div[T1, T2] with
+    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: PlusPlus[T1, T2] with
       type Out = StringOptType
 
   trait Eq[T1 <: DataType, T2 <: DataType]:

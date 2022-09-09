@@ -1,61 +1,84 @@
 package org.virtuslab.iskra
 
+import scala.language.implicitConversions
+
 import scala.quoted.*
 import org.virtuslab.iskra.types.BooleanOptType
 
-abstract class JoinOnCondition[MergedSchema, MergedView <: SchemaView](
-  val left: UntypedDataFrame, val right: UntypedDataFrame, val joinType: JoinType
-):
-  val mergedView: MergedView
+trait OnConditionJoiner[Join <: JoinType, Left, Right]
+
+trait JoinOnCondition[Join <: JoinType, Left <: DataFrame[?], Right <: DataFrame[?]]:
+  type JoiningView <: SchemaView
+  type JoinedSchema
+  def joiningView: JoiningView
 
 object JoinOnCondition:
-  given joinOnConditionOps: {} with
-    extension [Schema, View <: SchemaView] (joc: JoinOnCondition[Schema, View])
-      inline def apply[ConditionColumn](conditionColumn: View ?=> ConditionColumn): DataFrame[Schema] =
-        ${ applyImpl[Schema, View, ConditionColumn]('joc, 'conditionColumn) }
-  
-  def applyImpl[Schema : Type, View <: SchemaView : Type, ConditionColumn : Type](
-    joc: Expr[JoinOnCondition[Schema, View]],
-    conditionColumn: Expr[View ?=> ConditionColumn]
-  )(using Quotes): Expr[DataFrame[Schema]] =
+  private type LeftWithRight[Left, Right] = FrameSchema.Merge[Left, Right]
+  private type LeftWithOptionalRight[Left, Right] = FrameSchema.Merge[Left, FrameSchema.NullableSchema[Right]]
+  private type OptionalLeftWithRight[Left, Right] = FrameSchema.Merge[FrameSchema.NullableSchema[Left], Right]
+  private type OptionalLeftWithOptionalRight[Left, Right] = FrameSchema.Merge[FrameSchema.NullableSchema[Left], FrameSchema.NullableSchema[Right]]
+  private type OnlyLeft[Left, Right] = Left
+
+  transparent inline given inner[Left <: DataFrame[?], Right <: DataFrame[?]]: JoinOnCondition[JoinType.Inner.type, Left, Right] =
+    ${ joinOnConditionImpl[JoinType.Inner.type, LeftWithRight, Left, Right] }
+
+  transparent inline given left[Left <: DataFrame[?], Right <: DataFrame[?]]: JoinOnCondition[JoinType.Left.type, Left, Right] =
+    ${ joinOnConditionImpl[JoinType.Left.type, LeftWithOptionalRight, Left, Right] }
+
+  transparent inline given right[Left <: DataFrame[?], Right <: DataFrame[?]]: JoinOnCondition[JoinType.Right.type, Left, Right] =
+    ${ joinOnConditionImpl[JoinType.Right.type, OptionalLeftWithRight, Left, Right] }
+
+  transparent inline given full[Left <: DataFrame[?], Right <: DataFrame[?]]: JoinOnCondition[JoinType.Full.type, Left, Right] =
+    ${ joinOnConditionImpl[JoinType.Full.type, [S1, S2] =>> FrameSchema.Merge[FrameSchema.NullableSchema[S1], FrameSchema.NullableSchema[S2]], Left, Right] }
+
+  transparent inline given semi[Left <: DataFrame[?], Right <: DataFrame[?]]: JoinOnCondition[JoinType.Semi.type, Left, Right] =
+    ${ joinOnConditionImpl[JoinType.Semi.type, OnlyLeft, Left, Right] }
+
+  transparent inline given anti[Left <: DataFrame[?], Right <: DataFrame[?]]: JoinOnCondition[JoinType.Anti.type, Left, Right] =
+    ${ joinOnConditionImpl[JoinType.Anti.type, OnlyLeft, Left, Right] }
+
+
+  def joinOnConditionImpl[Join <: JoinType : Type, MergeSchemas[S1, S2] : Type, Left <: DataFrame[?] : Type, Right <: DataFrame[?] : Type](using Quotes) =
     import quotes.reflect.*
-    Type.of[ConditionColumn] match
-      case '[Column[BooleanOptType]] =>
-        '{
-          val condition = ${ conditionColumn }(using ${ joc }.mergedView).asInstanceOf[Column[BooleanOptType]].untyped
-
-          val sparkJoinType = ${ joc }.joinType match
-            case JoinType.Inner => "inner"
-            case JoinType.Left => "left"
-            case JoinType.Right => "right"
-            case JoinType.Outer => "outer"
-
-          val joined = ${ joc }.left.join(${ joc }.right, condition, sparkJoinType)
-          DataFrame[Schema](joined)
-        }
-
-      case '[t] =>
-        val errorMsg = s"""The parameter of `on` should be a (potentially nullable) boolean column (${Type.show[Column[BooleanOptType]]}) but it has type: ${Type.show[t]}"""
-        report.errorAndAbort(errorMsg, MacroHelpers.callPosition(joc))
-
-  def make[DF1 <: DataFrame[?] : Type, DF2 <: DataFrame[?] : Type](
-    left: Expr[UntypedDataFrame], right: Expr[UntypedDataFrame], joinType: Expr[JoinType]
-  )(using Quotes): Expr[JoinOnCondition[?, ?]] =
-    import quotes.reflect.*
-    mergeSchemaTypes(Type.of[DF1], Type.of[DF2]) match
-      case '[s] if FrameSchema.isValidType(Type.of[s]) =>
-        val viewExpr = SchemaView.schemaViewExpr[DataFrame[s]]
-        viewExpr.asTerm.tpe.asType match
-          case '[SchemaView.Subtype[v]] =>
-            '{
-              new JoinOnCondition[s, v](${left}, ${right}, ${joinType}) {
-                val mergedView: v = (${ viewExpr }).asInstanceOf[v]
-              }
-            }
-
-  def mergeSchemaTypes(df1: Type[?], df2: Type[?])(using Quotes): Type[?] =
-    df1 match
+    
+    Type.of[Left] match
       case '[DataFrame[s1]] =>
-        df2 match
+        Type.of[Right] match
           case '[DataFrame[s2]] =>
-            Type.of[FrameSchema.Merge[s1, s2]]
+            Type.of[FrameSchema.Merge[s1, s2]] match
+              case '[viewSchema] if FrameSchema.isValidType(Type.of[viewSchema]) =>
+                Type.of[MergeSchemas[s1, s2]] match
+                  case '[joinedSchema] if FrameSchema.isValidType(Type.of[joinedSchema]) =>
+                    val viewExpr = SchemaView.schemaViewExpr[DataFrame[viewSchema]]
+                    viewExpr.asTerm.tpe.asType match
+                      case '[SchemaView.Subtype[v]] =>
+                        '{
+                          new JoinOnCondition[Join, Left, Right] {
+                            override type JoinedSchema = joinedSchema
+                            override type JoiningView = v
+                            val joiningView: JoiningView = (${ viewExpr }).asInstanceOf[v]
+                          }
+                        }
+
+  implicit def joinOnConditionOps[T <: JoinType](join: Join[T])(using joc: JoinOnCondition[T, join.Left, join.Right]): JoinOnConditionOps[T, joc.JoiningView, joc.JoinedSchema] =
+    new JoinOnConditionOps[T, joc.JoiningView, joc.JoinedSchema](join, joc.joiningView)
+
+  class JoinOnConditionOps[T <: JoinType, JoiningView <: SchemaView, JoinedSchema](join: Join[T], joiningView: JoiningView):
+    inline def on[Condition](condition: JoiningView ?=> Condition): DataFrame[JoinedSchema] =      
+      ${ joinOnImpl[T, JoiningView, JoinedSchema, Condition]('join, 'joiningView, 'condition) }
+
+  def joinOnImpl[T <: JoinType : Type, JoiningView <: SchemaView : Type, JoinedSchema : Type, Condition : Type](
+    join: Expr[Join[?]], joiningView: Expr[JoiningView], condition: Expr[JoiningView ?=> Condition]
+  )(using Quotes) =
+    import quotes.reflect.*
+
+    '{ ${ condition }(using ${ joiningView }) } match
+      case '{ $cond: Column[BooleanOptType] } =>
+        '{
+          val joined = ${ join }.left.join(${ join }.right, ${ cond }.untyped, JoinType.typeName[T])
+          DataFrame[JoinedSchema](joined)
+        }
+      case '{ $cond: condType } =>
+        val errorMsg = s"""The join condition of `on` has to be a (potentially nullable) boolean column but it has type: ${Type.show[condType]}"""
+        // TODO: improve error position
+        report.errorAndAbort(errorMsg)

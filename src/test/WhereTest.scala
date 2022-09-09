@@ -1,9 +1,5 @@
 package org.virtuslab.iskra.test
 
-import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.matchers.should.Matchers.shouldEqual
-
 class WhereTest extends SparkUnitTest("WhereTest"):
   import org.virtuslab.iskra.api.*
   import functions.lit

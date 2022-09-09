@@ -6,7 +6,7 @@ import scala.quoted.*
 import types.{DataType, StructType}
 
 class DataFrame[Schema](val untyped: UntypedDataFrame):
-  type Alias <: Name
+  type Alias
 
 object DataFrame:
   export Select.dataFrameSelectOps
@@ -51,7 +51,7 @@ object DataFrame:
           Type.of[MacroHelpers.AsTuple[FrameSchema]] match
             case '[`structSchema`] =>
               '{ ${ df }.untyped.collect.toList.map(row => ${ enc }.decode(row).asInstanceOf[A]) }
-            case x =>
+            case _ =>
               val frameColumns = allColumns(Type.of[FrameSchema])
               val structColumns = allColumns(Type.of[structSchema])
               val errorMsg = s"A data frame with columns:\n${showColumns(frameColumns)}\ncannot be collected as a list of ${Type.show[A]}, which would be encoded as a row with columns:\n${showColumns(structColumns)}"

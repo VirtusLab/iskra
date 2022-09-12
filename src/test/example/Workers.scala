@@ -33,8 +33,8 @@ import functions.lit
   ).map{ case (id1, id2) => Supervision(id1, id2) }.toTypedDF
 
   workers.as("subordinates")
-    .join(supervisions).on($.subordinates.id === $.subordinateId)
-    .join(workers.as("supervisors")).on($.supervisorId === $.supervisors.id)
+    .leftJoin(supervisions).on($.subordinates.id === $.subordinateId)
+    .leftJoin(workers.as("supervisors")).on($.supervisorId === $.supervisors.id)
     .select {
       val salary = (lit(4732) + $.subordinates.yearsInCompany * lit(214)).as("salary")
       val supervisor = ($.supervisors.firstName ++ lit(" ") ++ $.supervisors.lastName).as("supervisor")
@@ -60,10 +60,11 @@ class ExampleTest extends AnyFunSuite:
     val expected = """|+---------+--------+---------------+------+
                       ||firstName|lastName|     supervisor|salary|
                       |+---------+--------+---------------+------+
+                      ||  Michael| Johnson|           null|  6230|
                       ||     Emma|   Brown|      Bob Smith|  6016|
-                      ||  Natalie|   Evans|Michael Johnson|  5588|
-                      ||    Alice|  Potter|Michael Johnson|  5588|
                       ||      Bob|   Smith|Michael Johnson|  6444|
+                      ||    Alice|  Potter|Michael Johnson|  5588|
+                      ||  Natalie|   Evans|Michael Johnson|  5588|
                       ||    Julia|  Taylor|  Natalie Evans|  5374|
                       ||     Paul|  Wilson|   Julia Taylor|  5374|
                       |+---------+--------+---------------+------+

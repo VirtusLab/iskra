@@ -14,6 +14,13 @@ object FrameSchema:
       case TupleSubtype[s2] => S1 *: s2
       case _ => S1 *: S2 *: EmptyTuple
 
+  type NullableLabeledColumn[T] = T match
+    case label := tpe => label := DataType.Nullable[tpe]
+
+  type NullableSchema[T] = T match
+    case TupleSubtype[s] => Tuple.Map[s, NullableLabeledColumn]
+    case _ => NullableLabeledColumn[T]
+
   def reownType[Owner <: Name : Type](schema: Type[?])(using Quotes): Type[?] =
     schema match
       case '[EmptyTuple] => Type.of[EmptyTuple]

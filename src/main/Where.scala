@@ -1,8 +1,6 @@
 package org.virtuslab.iskra
 
 import scala.quoted.*
-import scala.annotation.implicitNotFound
-
 import org.virtuslab.iskra.types.BooleanOptType
 
 trait Where[Schema, View <: SchemaView]:
@@ -13,6 +11,18 @@ object Where:
   given dataFrameWhereOps: {} with
     extension [Schema](df: DataFrame[Schema])
       transparent inline def where: Where[Schema, ?] = ${ Where.whereImpl[Schema]('{df}) }
+
+  def whereImpl[Schema : Type](df: Expr[DataFrame[Schema]])(using Quotes): Expr[Where[Schema, ?]] =
+    import quotes.reflect.asTerm
+    val viewExpr = SchemaView.schemaViewExpr[DataFrame[Schema]]
+    viewExpr.asTerm.tpe.asType match
+      case '[SchemaView.Subtype[v]] =>
+        '{
+          new Where[Schema, v] {
+            val view = ${ viewExpr }.asInstanceOf[v]
+            def underlying = ${ df }.untyped
+          }
+        }
 
   given whereApply: {} with
     extension [Schema, View <: SchemaView](where: Where[Schema, View])
@@ -34,15 +44,3 @@ object Where:
       case '{ $cond: condType } =>
         val errorMsg = s"""The filtering condition of `where` has to be a (potentially nullable) boolean column but it has type: ${Type.show[condType]}"""
         report.errorAndAbort(errorMsg, MacroHelpers.callPosition(where))
-
-  def whereImpl[Schema : Type](df: Expr[DataFrame[Schema]])(using Quotes): Expr[Where[Schema, ?]] =
-    import quotes.reflect.asTerm
-    val viewExpr = SchemaView.schemaViewExpr[DataFrame[Schema]]
-    viewExpr.asTerm.tpe.asType match
-      case '[SchemaView.Subtype[v]] =>
-        '{
-          new Where[Schema, v] {
-            val view = ${ viewExpr }.asInstanceOf[v]
-            def underlying = ${ df }.untyped
-          }
-        }

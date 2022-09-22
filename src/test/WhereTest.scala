@@ -1,6 +1,6 @@
 package org.virtuslab.iskra.test
 
-class WhereTest extends SparkUnitTest("WhereTest"):
+class WhereTest extends SparkUnitTest:
   import org.virtuslab.iskra.api.*
   import functions.lit
 

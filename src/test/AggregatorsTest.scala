@@ -1,6 +1,6 @@
 package org.virtuslab.iskra.test
 
-class AggregatorsTest extends SparkUnitTest("AggregatorsTest"):
+class AggregatorsTest extends SparkUnitTest:
   import org.virtuslab.iskra.api.*
   import functions.*
 

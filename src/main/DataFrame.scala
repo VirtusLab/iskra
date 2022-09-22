@@ -13,6 +13,8 @@ object DataFrame:
   export Join.dataFrameJoinOps
   export GroupBy.dataFrameGroupByOps
   export Where.dataFrameWhereOps
+  export WithColumn.dataFrameWithColumnOps
+  export WithColumns.dataFrameWithColumnsOps
 
   type Subtype[T <: DataFrame[?]] = T
   type WithAlias[T <: String & Singleton] = DataFrame[?] { type Alias = T }

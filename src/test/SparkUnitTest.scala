@@ -4,7 +4,9 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.BeforeAndAfterAll
 import org.virtuslab.iskra.api.*
 
-abstract class SparkUnitTest(suiteName: String) extends AnyFunSuite, BeforeAndAfterAll:
+abstract class SparkUnitTest extends AnyFunSuite, BeforeAndAfterAll:
+  def appName: String = getClass.getSimpleName
+  
   given spark: SparkSession =
     SparkSession
       .builder()

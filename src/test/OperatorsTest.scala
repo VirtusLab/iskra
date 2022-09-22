@@ -4,7 +4,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers.shouldEqual
 
-class OperatorsTest extends SparkUnitTest("OperatorsTest"):
+class OperatorsTest extends SparkUnitTest:
   import org.virtuslab.iskra.api.*
 
   case class Foo(boolean: Boolean, string: String, byte: Byte, short: Short, int: Int, long: Long, float: Float, double: Double)

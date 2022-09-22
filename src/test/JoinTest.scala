@@ -1,6 +1,6 @@
 package org.virtuslab.iskra.test
 
-class JoinTest extends SparkUnitTest("WhereTest"):
+class JoinTest extends SparkUnitTest:
   import org.virtuslab.iskra.api.*
   import functions.lit
   import Column.=== // by default shadowed by === from scalatest

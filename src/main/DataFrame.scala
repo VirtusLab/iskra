@@ -3,7 +3,7 @@ package org.virtuslab.iskra
 import org.apache.spark.sql
 import org.apache.spark.sql.SparkSession
 import scala.quoted.*
-import types.{DataType, StructType}
+import types.{Encoder, StructEncoder}
 
 class DataFrame[Schema](val untyped: UntypedDataFrame):
   type Alias
@@ -47,9 +47,9 @@ object DataFrame:
 
   // TODO: Use only a subset of columns 
   private def collectAsImpl[FrameSchema : Type, A : Type](df: Expr[DataFrame[FrameSchema]])(using Quotes): Expr[List[A]] =
-    Expr.summon[DataType.Encoder[A]] match
+    Expr.summon[Encoder[A]] match
       case Some(encoder) => encoder match
-        case '{ $enc: DataType.StructEncoder[A] { type StructSchema = structSchema } } =>
+        case '{ $enc: StructEncoder[A] { type StructSchema = structSchema } } =>
           Type.of[MacroHelpers.AsTuple[FrameSchema]] match
             case '[`structSchema`] =>
               '{ ${ df }.untyped.collect.toList.map(row => ${ enc }.decode(row).asInstanceOf[A]) }
@@ -58,7 +58,7 @@ object DataFrame:
               val structColumns = allColumns(Type.of[structSchema])
               val errorMsg = s"A data frame with columns:\n${showColumns(frameColumns)}\ncannot be collected as a list of ${Type.show[A]}, which would be encoded as a row with columns:\n${showColumns(structColumns)}"
               quotes.reflect.report.errorAndAbort(errorMsg)
-        case '{ $enc: DataType.Encoder[A] { type ColumnType = colType } } =>
+        case '{ $enc: Encoder[A] { type ColumnType = colType } } =>
           def fromDataType[T : Type] =
             Type.of[T] match
               case '[`colType`] =>

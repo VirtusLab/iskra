@@ -16,7 +16,7 @@ object ColumnOp:
     given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Plus[T1, T2] with
       type Out = DataType.CommonNumericNonNullableType[T1, T2]
     given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Plus[T1, T2] with
-      type Out = DataType.CommonNumericOptType[T1, T2]
+      type Out = DataType.CommonNumericNullableType[T1, T2]
 
   trait Minus[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
@@ -25,7 +25,7 @@ object ColumnOp:
     given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Minus[T1, T2] with
       type Out = DataType.CommonNumericNonNullableType[T1, T2]
     given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Minus[T1, T2] with
-      type Out = DataType.CommonNumericOptType[T1, T2]
+      type Out = DataType.CommonNumericNullableType[T1, T2]
 
   trait Mult[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType
@@ -34,7 +34,7 @@ object ColumnOp:
     given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Mult[T1, T2] with
       type Out = DataType.CommonNumericNonNullableType[T1, T2]
     given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Mult[T1, T2] with
-      type Out = DataType.CommonNumericOptType[T1, T2]
+      type Out = DataType.CommonNumericNullableType[T1, T2]
 
   trait Div[T1 <: DataType, T2 <: DataType]:
     type Out <: DataType

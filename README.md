@@ -1,6 +1,6 @@
 # Iskra
 
-Iskra is a Scala 3 wrapper around Apache Spark API which allows writing typesafe and boilerplate-free but still efficient Spark code.
+Iskra is a Scala 3 wrapper library around Apache Spark API which allows writing typesafe and boilerplate-free but still efficient Spark code.
 
 ## How is it possible to write Spark applications in Scala 3?
 
@@ -25,20 +25,20 @@ the coverage of Spark's API is far from being complete and more tests are needed
 
 * in a file compiled with Scala CLI:
 ```scala
-//> using lib "org.virtuslab::iskra:0.0.2"
+//> using lib "org.virtuslab::iskra:0.0.3"
 ```
 
 * when starting Scala CLI REPL:
 ```shell
-scala-cli repl --dep org.virtuslab::iskra:0.0.2
+scala-cli repl --dep org.virtuslab::iskra:0.0.3
 ```
 
 * in `build.sbt` in an sbt project:
 ```scala
-libraryDependencies += "org.virtuslab" %% "iskra" % "0.0.2"
+libraryDependencies += "org.virtuslab" %% "iskra" % "0.0.3"
 ```
 
-Iskra is built with Scala 3.1.3 so it's compatible with Scala 3.1.x and newer minor releases (starting from 3.2.0-RC1 you'll get code completions for names of columns in REPL and Metals!).
+Iskra is built with Scala 3.1.3 so it's compatible with Scala 3.1.x and newer minor releases (starting from 3.2.0 you'll get code completions for names of columns in REPL and Metals!).
 Iskra transitively depends on Spark 3.2.0.
 
 2) Import the basic definitions from the API

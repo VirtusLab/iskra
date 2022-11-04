@@ -24,7 +24,7 @@ trait PrimitiveNullableEncoder[-A] extends PrimitiveEncoder[Option[A]]:
 trait PrimitiveNonNullableEncoder[-A] extends PrimitiveEncoder[A]:
   def encode(value: A) = value
   def decode(value: Any) = value
-  def isNullable = true
+  def isNullable = false
 
 
 object Encoder:

@@ -28,7 +28,7 @@ export org.virtuslab.iskra.$
 export org.virtuslab.iskra.{Column, DataFrame, UntypedColumn, UntypedDataFrame, :=, /}
 
 object functions:
-  export org.virtuslab.iskra.functions.{lit, when}
+  export org.virtuslab.iskra.functions.{explode, lit, when}
   export org.virtuslab.iskra.functions.Aggregates.*
 
 export org.apache.spark.sql.SparkSession

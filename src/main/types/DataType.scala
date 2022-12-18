@@ -21,6 +21,7 @@ object DataType:
     case FloatOptType => FloatOptType
     case DoubleOptType => DoubleOptType
     case StructOptType[schema] => StructOptType[schema]
+    case ArrayOptType[schema] => ArrayOptType[schema]
 
   type NonNullable[T <: DataType] <: DataType = T match
     case BooleanOptType => BooleanType
@@ -32,6 +33,7 @@ object DataType:
     case FloatOptType => FloatOptType
     case DoubleOptType => DoubleOptType
     case StructOptType[schema] => StructOptType[schema]
+    case ArrayOptType[schema] => ArrayType[schema]
 
   type CommonNumericNullableType[T1 <: DataType, T2 <: DataType] <: NumericOptType = (T1, T2) match
     case (DoubleOptType, _) | (_, DoubleOptType) => DoubleOptType
@@ -77,3 +79,6 @@ final class DoubleType extends DoubleOptType, NotNull
 
 sealed class StructOptType[Schema <: Tuple] extends DataType
 final class StructType[Schema <: Tuple] extends StructOptType[Schema], NotNull
+
+sealed class ArrayOptType[T <: DataType] extends DataType
+final class ArrayType[T <: DataType] extends ArrayOptType[T], NotNull

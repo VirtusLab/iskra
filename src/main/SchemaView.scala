@@ -56,10 +56,10 @@ object SchemaView:
   //           val label = Expr(Type.valueOfConstant[name].get.toString)
   //           '{ Column[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
 
-  def schemaViewExpr[DF <: DataFrame[?] : Type](using Quotes): Expr[SchemaView] =
+  def schemaViewExpr[DF <: StructDataFrame[?] : Type](using Quotes): Expr[SchemaView] =
     import quotes.reflect.*
     Type.of[DF] match
-      case '[DataFrame[schema]] =>
+      case '[StructDataFrame[schema]] =>
         val schemaType = Type.of[AsTuple[schema]]
         val aliasViewsByName = frameAliasViewsByName(schemaType)
         val columns = unambiguousColumns(schemaType)    

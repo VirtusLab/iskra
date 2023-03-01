@@ -7,10 +7,10 @@ class Select[View <: SchemaView](val view: View, val underlying: UntypedDataFram
 
 object Select:
   given dataFrameSelectOps: {} with
-    extension [DF <: DataFrame[?]](df: DF)
+    extension [DF <: StructDataFrame[?]](df: DF)
       transparent inline def select: Select[?] = ${ selectImpl[DF]('{df}) }
 
-  def selectImpl[DF <: DataFrame[?] : Type](df: Expr[DF])(using Quotes): Expr[Select[?]] =
+  def selectImpl[DF <: StructDataFrame[?] : Type](df: Expr[DF])(using Quotes): Expr[Select[?]] =
     import quotes.reflect.asTerm
     val viewExpr = SchemaView.schemaViewExpr[DF]
     viewExpr.asTerm.tpe.asType match
@@ -24,18 +24,18 @@ object Select:
 
   given selectApply: {} with
     extension [View <: SchemaView](select: Select[View])
-      transparent inline def apply[Columns](columns: View ?=> Columns): DataFrame[?] =
+      transparent inline def apply[Columns](columns: View ?=> Columns): StructDataFrame[?] =
         ${ applyImpl[View, Columns]('select, 'columns) }
 
   def applyImpl[View <: SchemaView : Type, Columns : Type](
     select: Expr[Select[View]],
     columns: Expr[View ?=> Columns]
-  )(using Quotes): Expr[DataFrame[?]] =
+  )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
     Type.of[Columns] match
       case '[name := colType] =>
         '{
-          DataFrame[name := colType](
+          StructDataFrame[name := colType](
             ${ select }.underlying.select(${ columns }(using ${ select }.view).asInstanceOf[Column[?]].untyped)
           )
         }
@@ -43,7 +43,7 @@ object Select:
       case '[TupleSubtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
         '{
           val cols = ${ columns }(using ${ select }.view).asInstanceOf[s].toList.map(_.asInstanceOf[Column[?]].untyped)
-          DataFrame[s](${ select }.underlying.select(cols*))
+          StructDataFrame[s](${ select }.underlying.select(cols*))
         }
 
       case '[t] =>

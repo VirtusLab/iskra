@@ -12,17 +12,17 @@ class JoinTest extends SparkUnitTest:
   val foos = Seq(
     Foo(1, 10),
     Foo(2, 20)
-  ).toTypedDF
+  ).toTypedDF.asStruct
 
   val bars = Seq(
     Bar(2, "b"),
     Bar(3, "c")
-  ).toTypedDF
+  ).toTypedDF.asStruct
 
   test("join-inner-on") {
     val joined = foos.join(bars).on($.foos.int === $.bars.int)
 
-    val typedJoined: DataFrame[(
+    val typedJoined: StructDataFrame[(
       "foos" / "int" := IntegerType,
       "foos" / "long" := LongType,
       "bars" / "int" := IntegerType,
@@ -34,9 +34,9 @@ class JoinTest extends SparkUnitTest:
       $.foos.long.as("_2"),
       $.bars.int.as("_3"),
       $.bars.string.as("_4")
-    ).collectAs[(Int, Long, Int, String)]
+    ).asClass[(Int, Long, Int, String)].collect().toList
 
-    result shouldEqual Seq(
+    result shouldEqual List(
       (2, 20, 2, "b")
     )
   }
@@ -44,7 +44,7 @@ class JoinTest extends SparkUnitTest:
   test("join-left-on") {
     val joined = foos.leftJoin(bars).on($.foos.int === $.bars.int)
 
-    val typedJoined: DataFrame[(
+    val typedJoined: StructDataFrame[(
       "foos" / "int" := IntegerType,
       "foos" / "long" := LongType,
       "bars" / "int" := IntegerOptType,
@@ -56,9 +56,9 @@ class JoinTest extends SparkUnitTest:
       $.foos.long.as("_2"),
       $.bars.int.as("_3"),
       $.bars.string.as("_4")
-    ).collectAs[(Int, Long, Option[Int], Option[String])]
+    ).asClass[(Int, Long, Option[Int], Option[String])].collect().toList
 
-    result shouldEqual Seq(
+    result shouldEqual List(
       (1, 10, None, None),
       (2, 20, Some(2), Some("b"))
     )
@@ -67,7 +67,7 @@ class JoinTest extends SparkUnitTest:
   test("join-right-on") {
     val joined = foos.rightJoin(bars).on($.foos.int === $.bars.int)
 
-    val typedJoined: DataFrame[(
+    val typedJoined: StructDataFrame[(
       "foos" / "int" := IntegerOptType,
       "foos" / "long" := LongOptType,
       "bars" / "int" := IntegerType,
@@ -79,9 +79,9 @@ class JoinTest extends SparkUnitTest:
       $.foos.long.as("_2"),
       $.bars.int.as("_3"),
       $.bars.string.as("_4")
-    ).collectAs[(Option[Int], Option[Long], Int, String)]
+    ).asClass[(Option[Int], Option[Long], Int, String)].collect().toList
 
-    result shouldEqual Seq(
+    result shouldEqual List(
       (Some(2), Some(20), 2, "b"),
       (None, None, 3, "c")
     )
@@ -90,7 +90,7 @@ class JoinTest extends SparkUnitTest:
   test("join-full-on") {
     val joined = foos.fullJoin(bars).on($.foos.int === $.bars.int)
 
-    val typedJoined: DataFrame[(
+    val typedJoined: StructDataFrame[(
       "foos" / "int" := IntegerOptType,
       "foos" / "long" := LongOptType,
       "bars" / "int" := IntegerOptType,
@@ -102,9 +102,9 @@ class JoinTest extends SparkUnitTest:
       $.foos.long.as("_2"),
       $.bars.int.as("_3"),
       $.bars.string.as("_4")
-    ).collectAs[(Option[Int], Option[Long], Option[Int], Option[String])]
+    ).asClass[(Option[Int], Option[Long], Option[Int], Option[String])].collect().toList
 
-    result shouldEqual Seq(
+    result shouldEqual List(
       (Some(1), Some(10), None, None),
       (Some(2), Some(20), Some(2), Some("b")),
       (None, None, Some(3), Some("c"))
@@ -114,7 +114,7 @@ class JoinTest extends SparkUnitTest:
   test("join-semi-on") {
     val joined = foos.semiJoin(bars).on($.foos.int === $.bars.int)
 
-    val typedJoined: DataFrame[(
+    val typedJoined: StructDataFrame[(
       "foos" / "int" := IntegerType,
       "foos" / "long" := LongType
     )] = joined
@@ -122,9 +122,9 @@ class JoinTest extends SparkUnitTest:
     val result = joined.select(
       $.foos.int.as("_1"),
       $.foos.long.as("_2"),
-    ).collectAs[(Int, Long)]
+    ).asClass[(Int, Long)].collect().toList
 
-    result shouldEqual Seq(
+    result shouldEqual List(
       (2, 20)
     )
   }
@@ -132,7 +132,7 @@ class JoinTest extends SparkUnitTest:
   test("join-anti-on") {
     val joined = foos.antiJoin(bars).on($.foos.int === $.bars.int)
 
-    val typedJoined: DataFrame[(
+    val typedJoined: StructDataFrame[(
       "foos" / "int" := IntegerType,
       "foos" / "long" := LongType
     )] = joined
@@ -140,9 +140,9 @@ class JoinTest extends SparkUnitTest:
     val result = joined.select(
       $.foos.int.as("_1"),
       $.foos.long.as("_2"),
-    ).collectAs[(Int, Long)]
+    ).asClass[(Int, Long)].collect().toList
 
-    result shouldEqual Seq(
+    result shouldEqual List(
       (1, 10)
     )
   }
@@ -150,7 +150,7 @@ class JoinTest extends SparkUnitTest:
   test("join-cross") {
     val joined = foos.crossJoin(bars)
 
-    val typedJoined: DataFrame[(
+    val typedJoined: StructDataFrame[(
       "foos" / "int" := IntegerType,
       "foos" / "long" := LongType,
       "bars" / "int" := IntegerType,
@@ -162,9 +162,9 @@ class JoinTest extends SparkUnitTest:
       $.foos.long.as("_2"),
       $.bars.int.as("_3"),
       $.bars.string.as("_4")
-    ).collectAs[(Int, Long, Int, String)]
+    ).asClass[(Int, Long, Int, String)].collect().toList
 
-    result shouldEqual Seq(
+    result shouldEqual List(
       (1, 10, 2, "b"),
       (1, 10, 3, "c"),
       (2, 20, 2, "b"),
@@ -182,20 +182,20 @@ class JoinTest extends SparkUnitTest:
       $.fooz.long.as("_2"),
       $.bars.int.as("_3"),
       $.bars.string.as("_4")
-    ).collectAs[(Int, Long, Int, String)]
+    ).asClass[(Int, Long, Int, String)].collect().toList
 
     val result2 = joined2.select(
       $.foos.int.as("_1"),
       $.foos.long.as("_2"),
       $.barz.int.as("_3"),
       $.barz.string.as("_4")
-    ).collectAs[(Int, Long, Int, String)]
+    ).asClass[(Int, Long, Int, String)].collect().toList
 
-    result1 shouldEqual Seq(
+    result1 shouldEqual List(
       (2, 20, 2, "b")
     )
 
-    result2 shouldEqual Seq(
+    result2 shouldEqual List(
       (2, 20, 2, "b")
     )
   }

@@ -8,14 +8,14 @@ import org.virtuslab.iskra.types.{DataType, StructType, Encoder, StructEncoder, 
 
 object DataFrameBuilders:
   extension [A](seq: Seq[A])(using encoder: Encoder[A])
-    transparent inline def toTypedDF(using spark: SparkSession): DataFrame[?] = ${ toTypedDFImpl('seq, 'encoder, 'spark) }
+    inline def toTypedDF(using spark: SparkSession): ClassDataFrame[A] = ${ toTypedDFImpl('seq, 'encoder, 'spark) }
 
-  private def toTypedDFImpl[A : Type](seq: Expr[Seq[A]], encoder: Expr[Encoder[A]], spark: Expr[SparkSession])(using Quotes) =
-    val (schemaType, schema, encodeFun) = encoder match
+  private def toTypedDFImpl[A : Type](seq: Expr[Seq[A]], encoder: Expr[Encoder[A]], spark: Expr[SparkSession])(using Quotes) =    
+    val (schema, encodeFun) = encoder match
       case '{ $e: StructEncoder.Aux[A, t] } =>
         val schema = '{ ${ e }.catalystType }
         val encodeFun: Expr[A => sql.Row] = '{ ${ e }.encode }
-        (Type.of[t], schema, encodeFun)
+        (schema, encodeFun)
       case '{ $e: Encoder.Aux[tpe, t] } =>
         val schema = '{
           sql.types.StructType(Seq(
@@ -23,10 +23,9 @@ object DataFrameBuilders:
           ))
         }
         val encodeFun: Expr[A => sql.Row] = '{ (value: A) => sql.Row(${ encoder }.encode(value)) }
-        (Type.of["value" := t], schema, encodeFun)
+        (schema, encodeFun)
 
-    schemaType match
-      case '[t] => '{
+      '{
         val rowRDD = ${ spark }.sparkContext.parallelize(${ seq }.map(${ encodeFun }))
-        DataFrame[t](${ spark }.createDataFrame(rowRDD, ${ schema }))
+        ClassDataFrame[A](${ spark }.createDataFrame(rowRDD, ${ schema }))
       }

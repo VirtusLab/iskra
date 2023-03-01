@@ -8,15 +8,15 @@ class WithColumnsTest extends SparkUnitTest:
   case class Baz(a: Int, b: Int, c: Int, d: Int)
 
   val foos = Seq(
-    Foo(1, 2),
-  ).toTypedDF
+    Foo(1, 2)
+  ).toTypedDF.asStruct
 
   test("withColumn") {
     val result = foos
       .withColumn("c", $.a + $.b)
-      .collectAs[Bar]
+      .asClass[Bar].collect().toList
 
-    result shouldEqual Seq(Bar(1, 2, 3))
+    result shouldEqual List(Bar(1, 2, 3))
   }
 
   test("withColumns-single") {
@@ -24,9 +24,9 @@ class WithColumnsTest extends SparkUnitTest:
       .withColumns(
         ($.a + $.b).as("c")
       )
-      .collectAs[Bar]
+      .asClass[Bar].collect().toList
 
-    result shouldEqual Seq(Bar(1, 2, 3))
+    result shouldEqual List(Bar(1, 2, 3))
   }
 
   test("withColumns-many") {
@@ -35,7 +35,7 @@ class WithColumnsTest extends SparkUnitTest:
         ($.a + $.b).as("c"),
         ($.a - $.b).as("d"),
       )
-      .collectAs[Baz]
+      .asClass[Baz].collect().toList
 
-    result shouldEqual Seq(Baz(1, 2, 3, -1))
+    result shouldEqual List(Baz(1, 2, 3, -1))
   }

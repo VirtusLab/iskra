@@ -12,11 +12,11 @@ class OperatorsTest extends SparkUnitTest:
 
   val foos = Seq(
     Foo(true, "abc", 1, 2, 3, 4, 5.0, 6.0)
-  ).toTypedDF
+  ).toTypedDF.asStruct
 
   val bars = Seq(
     Bar(1, Some(10), None),
-  ).toTypedDF
+  ).toTypedDF.asStruct
 
   test("plus") {
     val result = foos.select(
@@ -27,9 +27,9 @@ class OperatorsTest extends SparkUnitTest:
       ($.float + $.float).as("_5"),
       ($.double + $.double).as("_6"),
       ($.short + $.float).as("_7"),
-    ).collectAs[(Byte, Short, Int, Long, Float, Double, Float)]
+    ).asClass[(Byte, Short, Int, Long, Float, Double, Float)].collect().toList
 
-    result shouldEqual Seq((2, 4, 6, 8, 10.0, 12.0, 7.0))
+    result shouldEqual List((2, 4, 6, 8, 10.0, 12.0, 7.0))
   }
 
   test("minus") {
@@ -41,9 +41,9 @@ class OperatorsTest extends SparkUnitTest:
       ($.float - $.float).as("_5"),
       ($.double - $.double).as("_6"),
       ($.double - $.byte).as("_7")
-    ).collectAs[(Byte, Short, Int, Long, Float, Double, Double)]
+    ).asClass[(Byte, Short, Int, Long, Float, Double, Double)].collect().toList
 
-    result shouldEqual Seq((0, 0, 0, 0, 0.0, 0.0, 5.0))
+    result shouldEqual List((0, 0, 0, 0, 0.0, 0.0, 5.0))
   }
 
   test("mult") {
@@ -55,9 +55,9 @@ class OperatorsTest extends SparkUnitTest:
       ($.float * $.float).as("_5"),
       ($.double * $.double).as("_6"),
       ($.int * $.float).as("_7"),
-    ).collectAs[(Byte, Short, Int, Long, Float, Double, Float)]
+    ).asClass[(Byte, Short, Int, Long, Float, Double, Float)].collect().toList
 
-    result shouldEqual Seq((1, 4, 9, 16, 25.0, 36.0, 15.0))
+    result shouldEqual List((1, 4, 9, 16, 25.0, 36.0, 15.0))
   }
 
   test("div") {
@@ -69,17 +69,17 @@ class OperatorsTest extends SparkUnitTest:
       ($.float / $.float).as("_5"),
       ($.double / $.double).as("_6"),
       ($.long / $.short).as("_7"),
-    ).collectAs[(Double, Double, Double, Double, Double, Double, Double)]
+    ).asClass[(Double, Double, Double, Double, Double, Double, Double)].collect().toList
 
-    result shouldEqual Seq((1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0))
+    result shouldEqual List((1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0))
   }
 
   test("plusplus") {
     val result = foos.select(
       ($.string ++ $.string).as("_1"),
-    ).collectAs[String]
+    ).asClass[String].collect().toList
 
-    result shouldEqual Seq("abcabc")
+    result shouldEqual List("abcabc")
   }
 
   test("eq") {
@@ -95,9 +95,9 @@ class OperatorsTest extends SparkUnitTest:
       ($.float === $.float).as("_7"),
       ($.double === $.double).as("_8"),
       ($.byte === $.int).as("_9"),
-    ).collectAs[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)]
+    ).asClass[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)].collect().toList
 
-    result shouldEqual Seq((true, true, true, true, true, true, true, true, false))
+    result shouldEqual List((true, true, true, true, true, true, true, true, false))
   }
 
   test("ne") {
@@ -111,9 +111,9 @@ class OperatorsTest extends SparkUnitTest:
       ($.float =!= $.float).as("_7"),
       ($.double =!= $.double).as("_8"),
       ($.short =!= $.float).as("_9"),
-    ).collectAs[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)]
+    ).asClass[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)].collect().toList
 
-    result shouldEqual Seq((false, false, false, false, false, false, false, false, true))
+    result shouldEqual List((false, false, false, false, false, false, false, false, true))
   }
 
   test("lt") {
@@ -127,9 +127,9 @@ class OperatorsTest extends SparkUnitTest:
       ($.float < $.float).as("_7"),
       ($.double < $.double).as("_8"),
       ($.byte < $.double).as("_9"),
-    ).collectAs[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)]
+    ).asClass[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)].collect().toList
 
-    result shouldEqual Seq((false, false, false, false, false, false, false, false, true))
+    result shouldEqual List((false, false, false, false, false, false, false, false, true))
   }
 
   test("le") {
@@ -143,9 +143,9 @@ class OperatorsTest extends SparkUnitTest:
       ($.float <= $.float).as("_7"),
       ($.double <= $.double).as("_8"),
       ($.long <= $.byte).as("_9"),
-    ).collectAs[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)]
+    ).asClass[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)].collect().toList
 
-    result shouldEqual Seq((true, true, true, true, true, true, true, true, false))
+    result shouldEqual List((true, true, true, true, true, true, true, true, false))
   }
 
   test("gt") {
@@ -159,9 +159,9 @@ class OperatorsTest extends SparkUnitTest:
       ($.float > $.float).as("_7"),
       ($.double > $.double).as("_8"),
       ($.float > $.long).as("_9"),
-    ).collectAs[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)]
+    ).asClass[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)].collect().toList
 
-    result shouldEqual Seq((false, false, false, false, false, false, false, false, true))
+    result shouldEqual List((false, false, false, false, false, false, false, false, true))
   }
 
   test("ge") {
@@ -175,25 +175,25 @@ class OperatorsTest extends SparkUnitTest:
       ($.float >= $.float).as("_7"),
       ($.double >= $.double).as("_8"),
       ($.short >= $.int).as("_9"),
-    ).collectAs[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)]
+    ).asClass[(Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Boolean)].collect().toList
 
-    result shouldEqual Seq((true, true, true, true, true, true, true, true, false))
+    result shouldEqual List((true, true, true, true, true, true, true, true, false))
   }
 
   test("and") {
     val result = foos.select(
       ($.boolean && $.boolean).as("_1"),
-    ).collectAs[Boolean]
+    ).asClass[Boolean].collect().toList
 
-    result shouldEqual Seq(true)
+    result shouldEqual List(true)
   }
 
   test("or") {
     val result = foos.select(
       ($.boolean || $.boolean).as("_1"),
-    ).collectAs[Boolean]
+    ).asClass[Boolean].collect().toList
 
-    result shouldEqual Seq(true)
+    result shouldEqual List(true)
   }
 
   test("plus nullable") {
@@ -206,7 +206,7 @@ class OperatorsTest extends SparkUnitTest:
       ($.intSome + $.intNone).as("_6"),
       ($.intNone + $.intSome).as("_7"),
       ($.intNone + $.intNone).as("_8"),
-    ).collectAs[(Option[Int], Option[Int], Option[Int], Option[Int], Option[Int], Option[Int], Option[Int], Option[Int])]
+    ).asClass[(Option[Int], Option[Int], Option[Int], Option[Int], Option[Int], Option[Int], Option[Int], Option[Int])].collect().toList
 
-    result shouldEqual Seq((Some(11), None, Some(11), None, Some(20), None, None, None))
+    result shouldEqual List((Some(11), None, Some(11), None, Some(20), None, None, None))
   }

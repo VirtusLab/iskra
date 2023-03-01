@@ -8,16 +8,16 @@ class GroupBy[View <: SchemaView](val view: View, val underlying: UntypedDataFra
 
 object GroupBy:
   given dataFrameGroupByOps: {} with
-    extension [S] (df: DataFrame[S])
+    extension [S] (df: StructDataFrame[S])
       transparent inline def groupBy: GroupBy[?] = ${ GroupBy.groupByImpl[S]('{df}) }
 
   given groupByOps: {} with
     extension [View <: SchemaView](groupBy: GroupBy[View])
       transparent inline def apply[GroupingColumns](groupingColumns: View ?=> GroupingColumns) = ${ applyImpl[View, GroupingColumns]('groupBy, 'groupingColumns) }
 
-  def groupByImpl[S : Type](df: Expr[DataFrame[S]])(using Quotes): Expr[GroupBy[?]] =
+  def groupByImpl[S : Type](df: Expr[StructDataFrame[S]])(using Quotes): Expr[GroupBy[?]] =
     import quotes.reflect.asTerm
-    val viewExpr = SchemaView.schemaViewExpr[DataFrame[S]]
+    val viewExpr = SchemaView.schemaViewExpr[StructDataFrame[S]]
     viewExpr.asTerm.tpe.asType match
       case '[SchemaView.Subtype[v]] =>
         '{ GroupBy[v](${ viewExpr }.asInstanceOf[v], ${ df }.untyped) }
@@ -26,7 +26,7 @@ object GroupBy:
     import quotes.reflect.*
     Type.of[GroupingColumns] match
       case '[name := colType] =>
-        val groupedViewExpr = SchemaView.schemaViewExpr[DataFrame[name := colType]]
+        val groupedViewExpr = SchemaView.schemaViewExpr[StructDataFrame[name := colType]]
         groupedViewExpr.asTerm.tpe.asType match
           case '[SchemaView.Subtype[gv]] =>
             '{
@@ -39,7 +39,7 @@ object GroupBy:
             }
 
       case '[TupleSubtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
-        val groupedViewExpr = SchemaView.schemaViewExpr[DataFrame[s]]
+        val groupedViewExpr = SchemaView.schemaViewExpr[StructDataFrame[s]]
         groupedViewExpr.asTerm.tpe.asType match
           case '[SchemaView.Subtype[gv]] =>
             '{
@@ -69,13 +69,13 @@ trait GroupedDataFrame[FullView <: SchemaView]:
 object GroupedDataFrame:
   given groupedDataFrameOps: {} with
     extension [FullView <: SchemaView, GroupKeys <: Tuple, GroupView <: SchemaView](gdf: GroupedDataFrame[FullView]{ type GroupedView = GroupView; type GroupingKeys = GroupKeys })
-      transparent inline def agg[AggregatedColumns](columns: Agg { type View = FullView } ?=> GroupView ?=> AggregatedColumns): DataFrame[?] =
+      transparent inline def agg[AggregatedColumns](columns: Agg { type View = FullView } ?=> GroupView ?=> AggregatedColumns): StructDataFrame[?] =
         ${ aggImpl[FullView, GroupKeys, GroupView, AggregatedColumns]('gdf, 'columns) }
 
   def aggImpl[FullView <: SchemaView : Type, GroupingKeys <: Tuple : Type, GroupView <: SchemaView : Type, AggregatedColumns : Type](
     gdf: Expr[GroupedDataFrame[FullView] { type GroupedView = GroupView }],
     columns: Expr[Agg { type View = FullView } ?=> GroupView ?=> AggregatedColumns]
-  )(using Quotes): Expr[DataFrame[?]] =
+  )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
     val aggWrapper = '{
       new Agg:
@@ -86,7 +86,7 @@ object GroupedDataFrame:
       case '[name := colType] =>
         '{
           val col = ${ columns }(using ${ aggWrapper })(using ${ gdf }.groupedView).asInstanceOf[name := colType].untyped
-          DataFrame[FrameSchema.Merge[GroupingKeys, name := colType]](
+          StructDataFrame[FrameSchema.Merge[GroupingKeys, name := colType]](
             ${ gdf }.underlying.agg(col)
           )
         }
@@ -94,7 +94,7 @@ object GroupedDataFrame:
         '{
           val cols = ${ columns }(using ${ aggWrapper })(using ${ gdf }.groupedView)
             .asInstanceOf[s].toList.map(_.asInstanceOf[Column[DataType]].untyped)
-          DataFrame[FrameSchema.Merge[GroupingKeys, s]](
+          StructDataFrame[FrameSchema.Merge[GroupingKeys, s]](
             ${ gdf }.underlying.agg(cols.head, cols.tail*)
           )
         }

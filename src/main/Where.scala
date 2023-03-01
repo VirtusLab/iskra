@@ -9,12 +9,12 @@ trait Where[Schema, View <: SchemaView]:
 
 object Where:
   given dataFrameWhereOps: {} with
-    extension [Schema](df: DataFrame[Schema])
+    extension [Schema](df: StructDataFrame[Schema])
       transparent inline def where: Where[Schema, ?] = ${ Where.whereImpl[Schema]('{df}) }
 
-  def whereImpl[Schema : Type](df: Expr[DataFrame[Schema]])(using Quotes): Expr[Where[Schema, ?]] =
+  def whereImpl[Schema : Type](df: Expr[StructDataFrame[Schema]])(using Quotes): Expr[Where[Schema, ?]] =
     import quotes.reflect.asTerm
-    val viewExpr = SchemaView.schemaViewExpr[DataFrame[Schema]]
+    val viewExpr = SchemaView.schemaViewExpr[StructDataFrame[Schema]]
     viewExpr.asTerm.tpe.asType match
       case '[SchemaView.Subtype[v]] =>
         '{
@@ -26,20 +26,20 @@ object Where:
 
   given whereApply: {} with
     extension [Schema, View <: SchemaView](where: Where[Schema, View])
-      inline def apply[Condition](condition: View ?=> Condition): DataFrame[Schema] =
+      inline def apply[Condition](condition: View ?=> Condition): StructDataFrame[Schema] =
         ${ Where.applyImpl[Schema, View, Condition]('where, 'condition) }
 
   def applyImpl[Schema : Type, View <: SchemaView : Type, Condition : Type](
     where: Expr[Where[Schema, View]],
     condition: Expr[View ?=> Condition]
-  )(using Quotes): Expr[DataFrame[Schema]] =
+  )(using Quotes): Expr[StructDataFrame[Schema]] =
     import quotes.reflect.*
 
     '{ ${ condition }(using ${ where }.view) } match
       case '{ $cond: Column[BooleanOptType] } =>
         '{
           val filtered = ${ where }.underlying.where(${ cond }.untyped)
-          DataFrame[Schema](filtered)
+          StructDataFrame[Schema](filtered)
         }
       case '{ $cond: condType } =>
         val errorMsg = s"""The filtering condition of `where` has to be a (potentially nullable) boolean column but it has type: ${Type.show[condType]}"""

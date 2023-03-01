@@ -21,32 +21,32 @@ object JoinType:
     case _: Anti.type => "anti"
 
 trait Join[T <: JoinType](val left: UntypedDataFrame, val right: UntypedDataFrame):
-  type Left <: DataFrame[?]
-  type Right <: DataFrame[?]
+  type Left <: StructDataFrame[?]
+  type Right <: StructDataFrame[?]
 
 object Join:
   given dataFrameJoinOps: {} with
-    extension [LeftDF <: DataFrame[?]](inline leftDF: LeftDF)
-      transparent inline def join[RightDF <: DataFrame[?]](inline rightDF: RightDF): Join[JoinType.Inner.type] =
+    extension [LeftDF <: StructDataFrame[?]](inline leftDF: LeftDF)
+      transparent inline def join[RightDF <: StructDataFrame[?]](inline rightDF: RightDF): Join[JoinType.Inner.type] =
         ${ joinImpl[JoinType.Inner.type, LeftDF, RightDF]('leftDF, 'rightDF) }
-      transparent inline def innerJoin[RightDF <: DataFrame[?]](inline rightDF: RightDF): Join[JoinType.Inner.type] =
+      transparent inline def innerJoin[RightDF <: StructDataFrame[?]](inline rightDF: RightDF): Join[JoinType.Inner.type] =
         ${ joinImpl[JoinType.Inner.type, LeftDF, RightDF]('leftDF, 'rightDF) }
-      transparent inline def leftJoin[RightDF <: DataFrame[?]](inline rightDF: RightDF): Join[JoinType.Left.type] =
+      transparent inline def leftJoin[RightDF <: StructDataFrame[?]](inline rightDF: RightDF): Join[JoinType.Left.type] =
         ${ joinImpl[JoinType.Left.type, LeftDF, RightDF]('leftDF, 'rightDF) }
-      transparent inline def rightJoin[RightDF <: DataFrame[?]](inline rightDF: RightDF): Join[JoinType.Right.type] =
+      transparent inline def rightJoin[RightDF <: StructDataFrame[?]](inline rightDF: RightDF): Join[JoinType.Right.type] =
         ${ joinImpl[JoinType.Right.type, LeftDF, RightDF]('leftDF, 'rightDF) }
-      transparent inline def fullJoin[RightDF <: DataFrame[?]](inline rightDF: RightDF): Join[JoinType.Full.type] =
+      transparent inline def fullJoin[RightDF <: StructDataFrame[?]](inline rightDF: RightDF): Join[JoinType.Full.type] =
         ${ joinImpl[JoinType.Full.type, LeftDF, RightDF]('leftDF, 'rightDF) }
-      transparent inline def semiJoin[RightDF <: DataFrame[?]](inline rightDF: RightDF): Join[JoinType.Semi.type] =
+      transparent inline def semiJoin[RightDF <: StructDataFrame[?]](inline rightDF: RightDF): Join[JoinType.Semi.type] =
         ${ joinImpl[JoinType.Semi.type, LeftDF, RightDF]('leftDF, 'rightDF) }
-      transparent inline def antiJoin[RightDF <: DataFrame[?]](inline rightDF: RightDF): Join[JoinType.Anti.type] =
+      transparent inline def antiJoin[RightDF <: StructDataFrame[?]](inline rightDF: RightDF): Join[JoinType.Anti.type] =
         ${ joinImpl[JoinType.Anti.type, LeftDF, RightDF]('leftDF, 'rightDF) }
 
-      transparent inline def crossJoin[RightDF <: DataFrame[?]](inline rightDF: RightDF): DataFrame[?] =
+      transparent inline def crossJoin[RightDF <: StructDataFrame[?]](inline rightDF: RightDF): StructDataFrame[?] =
         ${ crossJoinImpl[LeftDF, RightDF]('leftDF, 'rightDF) }
   end dataFrameJoinOps
 
-  def joinImpl[T <: JoinType : Type, LeftDF <: DataFrame[?] : Type, RightDF <: DataFrame[?] : Type](
+  def joinImpl[T <: JoinType : Type, LeftDF <: StructDataFrame[?] : Type, RightDF <: StructDataFrame[?] : Type](
     leftDF: Expr[LeftDF], rightDF: Expr[RightDF]
   )(using Quotes) =
     Aliasing.autoAliasImpl(leftDF) match
@@ -58,16 +58,16 @@ object Join:
                 : Join[T]{ type Left = l; type Right = r }
             }
 
-  def crossJoinImpl[LeftDF <: DataFrame[?] : Type, RightDF <: DataFrame[?] : Type](
+  def crossJoinImpl[LeftDF <: StructDataFrame[?] : Type, RightDF <: StructDataFrame[?] : Type](
     leftDF: Expr[LeftDF], rightDF: Expr[RightDF]
-  )(using Quotes): Expr[DataFrame[?]] =
+  )(using Quotes): Expr[StructDataFrame[?]] =
     Aliasing.autoAliasImpl(leftDF) match
-      case '{ $left: DataFrame[l] } =>
+      case '{ $left: StructDataFrame[l] } =>
         Aliasing.autoAliasImpl(rightDF) match
-          case '{ $right: DataFrame[r] } =>
+          case '{ $right: StructDataFrame[r] } =>
             '{
               val joined = ${left}.untyped.crossJoin(${right}.untyped)
-              DataFrame[FrameSchema.Merge[l, r]](joined)
+              StructDataFrame[FrameSchema.Merge[l, r]](joined)
             }
 
   export JoinOnCondition.joinOnConditionOps

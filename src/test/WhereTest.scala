@@ -10,13 +10,13 @@ class WhereTest extends SparkUnitTest:
     Foo(1, Some(1)),
     Foo(2, None),
     Foo(3, Some(3))
-  ).toTypedDF
+  ).toTypedDF.asStruct
 
   test("where-nonnullable") {
     val result = foos
       .where($.int >= lit(2))
       .select($.intOpt)
-      .collectAs[Option[Int]]
+      .asClass[Option[Int]].collect().toList
 
     result shouldEqual Seq(None, Some(3))
   }
@@ -25,7 +25,7 @@ class WhereTest extends SparkUnitTest:
     val result = foos
       .where($.intOpt >= lit(2))
       .select($.int)
-      .collectAs[Int]
+      .asClass[Int].collect().toList
 
     result shouldEqual Seq(3)
   }

@@ -9,7 +9,7 @@ class AggregatorsTest extends SparkUnitTest:
   val foos = Seq(
     Foo("a", 1, Some(1), 1.0f, Some(1.0f)),
     Foo("a", 3, None, 3.0f, None)
-  ).toTypedDF
+  ).toTypedDF.asStruct
 
   test("sum") {
     val result = foos.groupBy($.string).agg(
@@ -19,9 +19,9 @@ class AggregatorsTest extends SparkUnitTest:
       sum($.floatOpt).as("_4"),
     )
     .select($._1, $._2, $._3, $._4)
-    .collectAs[(Option[Int], Option[Int], Option[Float], Option[Float])]
+    .asClass[(Option[Int], Option[Int], Option[Float], Option[Float])].collect().toList
 
-    result shouldEqual Seq((Some(4), Some(1), Some(4.0f), Some(1.0f)))
+    result shouldEqual List((Some(4), Some(1), Some(4.0f), Some(1.0f)))
   }
 
   test("max") {
@@ -32,9 +32,9 @@ class AggregatorsTest extends SparkUnitTest:
       max($.floatOpt).as("_4"),
     )
     .select($._1, $._2, $._3, $._4)
-    .collectAs[(Option[Int], Option[Int], Option[Float], Option[Float])]
+    .asClass[(Option[Int], Option[Int], Option[Float], Option[Float])].collect().toList
 
-    result shouldEqual Seq((Some(3), Some(1), Some(3.0f), Some(1.0f)))
+    result shouldEqual List((Some(3), Some(1), Some(3.0f), Some(1.0f)))
   }
 
   test("min") {
@@ -45,9 +45,9 @@ class AggregatorsTest extends SparkUnitTest:
       min($.floatOpt).as("_4"),
     )
     .select($._1, $._2, $._3, $._4)
-    .collectAs[(Option[Int], Option[Int], Option[Float], Option[Float])]
+    .asClass[(Option[Int], Option[Int], Option[Float], Option[Float])].collect().toList
 
-    result shouldEqual Seq((Some(1), Some(1), Some(1.0f), Some(1.0f)))
+    result shouldEqual List((Some(1), Some(1), Some(1.0f), Some(1.0f)))
   }
 
   test("avg") {
@@ -58,7 +58,7 @@ class AggregatorsTest extends SparkUnitTest:
       avg($.floatOpt).as("_4"),
     )
     .select($._1, $._2, $._3, $._4)
-    .collectAs[(Option[Double], Option[Double], Option[Double], Option[Double])]
+    .asClass[(Option[Double], Option[Double], Option[Double], Option[Double])].collect().toList
 
-    result shouldEqual Seq((Some(2.0), Some(1.0), Some(2.0), Some(1.0)))
+    result shouldEqual List((Some(2.0), Some(1.0), Some(2.0), Some(1.0)))
   }

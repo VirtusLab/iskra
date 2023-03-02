@@ -7,10 +7,10 @@ class WithColumns[Schema, View <: SchemaView](val view: View, val underlying: Un
 
 object WithColumns:
   given dataFrameWithColumnsOps: {} with
-    extension [Schema, DF <: DataFrame[Schema]](df: DF)
+    extension [Schema, DF <: StructDataFrame[Schema]](df: DF)
       transparent inline def withColumns: WithColumns[Schema, ?] = ${ withColumnsImpl[Schema, DF]('{df}) }
 
-  def withColumnsImpl[Schema : Type, DF <: DataFrame[Schema] : Type](df: Expr[DF])(using Quotes): Expr[WithColumns[Schema, ?]] =
+  def withColumnsImpl[Schema : Type, DF <: StructDataFrame[Schema] : Type](df: Expr[DF])(using Quotes): Expr[WithColumns[Schema, ?]] =
     import quotes.reflect.asTerm
     val viewExpr = SchemaView.schemaViewExpr[DF]
     viewExpr.asTerm.tpe.asType match
@@ -24,13 +24,13 @@ object WithColumns:
 
   given withColumnsApply: {} with
     extension [Schema, View <: SchemaView](withColumns: WithColumns[Schema, View])
-      transparent inline def apply[Columns](columns: View ?=> Columns): DataFrame[?] =
+      transparent inline def apply[Columns](columns: View ?=> Columns): StructDataFrame[?] =
         ${ applyImpl[Schema, View, Columns]('withColumns, 'columns) }
 
   def applyImpl[Schema : Type, View <: SchemaView : Type, Columns : Type](
     withColumns: Expr[WithColumns[Schema, View]],
     columns: Expr[View ?=> Columns]
-  )(using Quotes): Expr[DataFrame[?]] =
+  )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
     Type.of[Columns] match
       case '[name := colType] =>
@@ -38,7 +38,7 @@ object WithColumns:
         '{
           type OutSchema = FrameSchema.Merge[Schema, name := colType]
           val col = ${ columns }(using ${ withColumns }.view).asInstanceOf[Column[?]].untyped
-          DataFrame[OutSchema](
+          StructDataFrame[OutSchema](
             ${ withColumns }.underlying.withColumn(${label}, col)
           )
         }
@@ -53,7 +53,7 @@ object WithColumns:
               case (df, (label, col)) =>
                 df.withColumn(label, col)
             }
-          DataFrame[OutSchema](withColumnsAppended)
+          StructDataFrame[OutSchema](withColumnsAppended)
         }
 
       case '[t] =>

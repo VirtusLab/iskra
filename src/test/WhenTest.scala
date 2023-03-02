@@ -11,12 +11,12 @@ class WhenTest extends SparkUnitTest:
     Foo(1),
     Foo(2),
     Foo(3)
-  ).toTypedDF
+  ).toTypedDF.asStruct
 
   test("when-without-fallback") {
     val result = foos
       .select(when($.int === lit(1), lit("a")).as("strOpt"))
-      .collectAs[Option[String]]
+      .asClass[Option[String]].collect().toList
 
     result shouldEqual Seq(Some("a"), None, None)
   }
@@ -28,7 +28,7 @@ class WhenTest extends SparkUnitTest:
           .otherwise(lit(100d))
           .as("double")
       }
-      .collectAs[Double]
+      .asClass[Double].collect().toList
 
     result shouldEqual Seq(10d, 100d, 100d)
   }
@@ -40,7 +40,7 @@ class WhenTest extends SparkUnitTest:
           .when($.int === lit(2), lit(100L))
           .as("longOpt")
       }
-      .collectAs[Option[Long]]
+      .asClass[Option[Long]].collect().toList
 
     result shouldEqual Seq(Some(10L), Some(100L), None)
   }
@@ -53,7 +53,7 @@ class WhenTest extends SparkUnitTest:
           .otherwise(lit(1000d))
           .as("str")
       }
-      .collectAs[Option[Double]]
+      .asClass[Option[Double]].collect().toList
 
     result shouldEqual Seq(Some(10d), Some(100d), Some(1000d))
   }

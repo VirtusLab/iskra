@@ -8,7 +8,7 @@ import org.virtuslab.iskra.types.{DataType, StructType, Encoder, StructEncoder, 
 
 object DataFrameBuilders:
   extension [A](seq: Seq[A])(using encoder: Encoder[A])
-    inline def toTypedDF(using spark: SparkSession): ClassDataFrame[A] = ${ toTypedDFImpl('seq, 'encoder, 'spark) }
+    inline def toDF(using spark: SparkSession): ClassDataFrame[A] = ${ toTypedDFImpl('seq, 'encoder, 'spark) }
 
   private def toTypedDFImpl[A : Type](seq: Expr[Seq[A]], encoder: Expr[Encoder[A]], spark: Expr[SparkSession])(using Quotes) =    
     val (schema, encodeFun) = encoder match

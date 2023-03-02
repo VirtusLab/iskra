@@ -9,7 +9,7 @@ class WithColumnsTest extends SparkUnitTest:
 
   val foos = Seq(
     Foo(1, 2)
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   test("withColumn") {
     val result = foos

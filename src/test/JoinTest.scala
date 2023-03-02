@@ -12,12 +12,12 @@ class JoinTest extends SparkUnitTest:
   val foos = Seq(
     Foo(1, 10),
     Foo(2, 20)
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   val bars = Seq(
     Bar(2, "b"),
     Bar(3, "c")
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   test("join-inner-on") {
     val joined = foos.join(bars).on($.foos.int === $.bars.int)

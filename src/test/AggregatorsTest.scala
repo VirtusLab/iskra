@@ -9,7 +9,7 @@ class AggregatorsTest extends SparkUnitTest:
   val foos = Seq(
     Foo("a", 1, Some(1), 1.0f, Some(1.0f)),
     Foo("a", 3, None, 3.0f, None)
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   test("sum") {
     val result = foos.groupBy($.string).agg(

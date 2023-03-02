@@ -12,11 +12,11 @@ class OperatorsTest extends SparkUnitTest:
 
   val foos = Seq(
     Foo(true, "abc", 1, 2, 3, 4, 5.0, 6.0)
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   val bars = Seq(
     Bar(1, Some(10), None),
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   test("plus") {
     val result = foos.select(

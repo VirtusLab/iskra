@@ -22,7 +22,7 @@ import functions.avg
     City("Washington", 718355),
     City("London", 	9540576),
     City("Ottawa", 	1422635)
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   val countries = Seq(
     Country("United Kingdom", "Europe", "London", 67886011, 39532),
@@ -30,7 +30,7 @@ import functions.avg
     Country("USA", "North America", "Washington", 331002651, 59939),
     Country("Poland", "Europe", "Warsaw", 37846611, 13871),
     Country("Canada", "North America", "Ottawa", 37742154, 44841)
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   countries.join(cities) // shorthand for: countries.as("countries").join(cities.as("cities"))
     .on($.countries.capital === $.cities.name)

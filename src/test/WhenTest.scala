@@ -11,7 +11,7 @@ class WhenTest extends SparkUnitTest:
     Foo(1),
     Foo(2),
     Foo(3)
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   test("when-without-fallback") {
     val result = foos

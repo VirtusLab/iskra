@@ -26,11 +26,11 @@ import functions.lit
     Worker(18, "Natalie", "Evans", 4),
     Worker(22, "Paul", "Wilson", 3),
     Worker(44, "Daniel", "Jones", 1)
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   val supervisions = Seq(
     44 -> 21, 22 -> 21, 38 -> 13, 11 -> 3, 21 -> 18, 13 -> 8, 3 -> 8, 18 -> 8
-  ).map{ case (id1, id2) => Supervision(id1, id2) }.toTypedDF.asStruct
+  ).map{ case (id1, id2) => Supervision(id1, id2) }.toDF.asStruct
 
   workers.as("subordinates")
     .leftJoin(supervisions).on($.subordinates.id === $.subordinateId)

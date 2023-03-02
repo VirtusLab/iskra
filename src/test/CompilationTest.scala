@@ -8,13 +8,13 @@ class CompilationTest extends AnyFunSuite:
       |import org.virtuslab.iskra.api.*
       |case class Foo(string: String)
       |given spark: SparkSession = ???
-      |val elements = Seq(Foo("abc")).toTypedDF.asStruct.select($.string)
+      |val elements = Seq(Foo("abc")).toDF.asStruct.select($.string)
       |""".stripMargin)
 
     assertDoesNotCompile("""
       |import org.virtuslab.iskra.api.*
       |case class Foo(string: String)
       |given spark: SparkSession = ???
-      |val elements = Seq(Foo("abc")).toTypedDF.asStruct.select($.strin)
+      |val elements = Seq(Foo("abc")).toDF.asStruct.select($.strin)
       |""".stripMargin)
   }

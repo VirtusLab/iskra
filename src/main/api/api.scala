@@ -1,7 +1,7 @@
 package org.virtuslab.iskra
 package api
 
-export DataFrameBuilders.toTypedDF
+export DataFrameBuilders.toDF
 export types.{
   DataType,
   BooleanType,

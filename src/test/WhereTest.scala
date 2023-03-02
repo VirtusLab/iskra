@@ -10,7 +10,7 @@ class WhereTest extends SparkUnitTest:
     Foo(1, Some(1)),
     Foo(2, None),
     Foo(3, Some(3))
-  ).toTypedDF.asStruct
+  ).toDF.asStruct
 
   test("where-nonnullable") {
     val result = foos

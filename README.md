@@ -91,5 +91,6 @@ foos.innerJoin(bars).on($.foos.barId === $.bars.id).select(...)
 
 ## Local development
 
-
 This project is built using [scala-cli](https://scala-cli.virtuslab.org/) so just use the traditional commands with `.` as root like `scala-cli compile .` or `scala-cli test .`.
+
+For a more recent version of `Usage` section look [here](./USAGE-DEV.md)

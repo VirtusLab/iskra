@@ -49,7 +49,7 @@ object JoinOnCondition:
               case '[viewSchema] if FrameSchema.isValidType(Type.of[viewSchema]) =>
                 Type.of[MergeSchemas[s1, s2]] match
                   case '[joinedSchema] if FrameSchema.isValidType(Type.of[joinedSchema]) =>
-                    val viewExpr = SchemaView.schemaViewExpr[StructDataFrame[viewSchema]]
+                    val viewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[viewSchema]]
                     viewExpr.asTerm.tpe.asType match
                       case '[SchemaView.Subtype[v]] =>
                         '{

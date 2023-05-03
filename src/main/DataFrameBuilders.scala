@@ -25,7 +25,7 @@ object DataFrameBuilders:
         val encodeFun: Expr[A => sql.Row] = '{ (value: A) => sql.Row(${ encoder }.encode(value)) }
         (schema, encodeFun)
 
-      '{
-        val rowRDD = ${ spark }.sparkContext.parallelize(${ seq }.map(${ encodeFun }))
-        ClassDataFrame[A](${ spark }.createDataFrame(rowRDD, ${ schema }))
-      }
+    '{
+      val rowRDD = ${ spark }.sparkContext.parallelize(${ seq }.map(${ encodeFun }))
+      ClassDataFrame[A](${ spark }.createDataFrame(rowRDD, ${ schema }))
+    }

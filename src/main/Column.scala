@@ -29,8 +29,11 @@ object Column:
     inline def &&[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.And[T1, T2]): Column[op.Out] = op(col1, col2)
     inline def ||[T2 <: DataType](col2: Column[T2])(using op: ColumnOp.Or[T1, T2]): Column[op.Out] = op(col1, col2)
 
+trait NamedColumn[T <: DataType]:
+  self: Column[T] =>
+
 @annotation.showAsInfix
-class :=[L <: LabeledColumn.Label, T <: DataType](untyped: UntypedColumn) extends Column[T](untyped)
+class :=[L <: LabeledColumn.Label, T <: DataType](untyped: UntypedColumn) extends Column[T](untyped) with NamedColumn[T]
 
 @annotation.showAsInfix
 trait /[+Prefix <: Name, +Suffix <: Name]

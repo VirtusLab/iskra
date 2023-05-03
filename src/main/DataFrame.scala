@@ -11,6 +11,7 @@ trait DataFrame:
 object DataFrame:
   export Aliasing.dataFrameAliasingOps
   export Select.dataFrameSelectOps
+  export SelectRow.dataFrameSelectRowOps
   export Join.dataFrameJoinOps
   export GroupBy.dataFrameGroupByOps
   export Where.dataFrameWhereOps

@@ -1,13 +1,27 @@
 package org.virtuslab.iskra
 
-import scala.quoted._
+import scala.quoted.*
 import org.apache.spark.sql.functions.col
 import types.DataType
 import MacroHelpers.AsTuple
 
 inline def $(using view: SchemaView): view.type = view
 
-trait SchemaView extends Selectable:
+trait SchemaView
+
+object SchemaView:
+  type Subtype[T <: SchemaView] = T
+
+  private[iskra] def exprForDataFrame[DF <: DataFrame : Type](using quotes: Quotes): Option[Expr[SchemaView]] =
+    Type.of[DF] match
+      case '[ClassDataFrame[a]] =>
+        Expr.summon[SchemaViewProvider[a]].map {
+          case '{ $provider } => '{ ${ provider }.view }
+        }
+      case '[StructDataFrame.Subtype[df]] =>
+        Some(StructSchemaView.schemaViewExpr[df])
+
+trait StructSchemaView extends SchemaView, Selectable:
   def frameAliases: Seq[String] // TODO: get rid of this at runtime
   
   // TODO: What should be the semantics of `*`? How to handle ambiguous columns?
@@ -19,8 +33,8 @@ trait SchemaView extends Selectable:
       then AliasedSchemaView(name)
       else LabeledColumn(col(Name.escape(name)))
 
-object SchemaView:
-  type Subtype[T <: SchemaView] = T
+object StructSchemaView:
+  type Subtype[T <: StructSchemaView] = T
 
   private def refineType(using Quotes)(base: quotes.reflect.TypeRepr, refinements: List[(String, quotes.reflect.TypeRepr)]): quotes.reflect.TypeRepr =
     import quotes.reflect.*
@@ -56,7 +70,7 @@ object SchemaView:
   //           val label = Expr(Type.valueOfConstant[name].get.toString)
   //           '{ Column[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
 
-  def schemaViewExpr[DF <: StructDataFrame[?] : Type](using Quotes): Expr[SchemaView] =
+  def schemaViewExpr[DF <: StructDataFrame[?] : Type](using Quotes): Expr[StructSchemaView] =
     import quotes.reflect.*
     Type.of[DF] match
       case '[StructDataFrame[schema]] =>
@@ -64,18 +78,19 @@ object SchemaView:
         val aliasViewsByName = frameAliasViewsByName(schemaType)
         val columns = unambiguousColumns(schemaType)    
         val frameAliasNames = Expr(aliasViewsByName.map(_._1))
-        val baseType = TypeRepr.of[SchemaView]
+        val baseType = TypeRepr.of[StructSchemaView]
         val viewType = refineType(refineType(baseType, columns), aliasViewsByName) // TODO: conflicting name of frame alias and column?
 
         viewType.asType match
-          case '[SchemaView.Subtype[t]] => '{
-            new SchemaView {
-              override def frameAliases: Seq[String] = ${ frameAliasNames }
-              // TODO: Reintroduce `*` selector
-              // type AllColumns = schema 
-              // override def * : AllColumns = ${ reifyColumns[schema] }.asInstanceOf[AllColumns]
-            }.asInstanceOf[t]
-          }
+          case '[StructSchemaView.Subtype[t]] => 
+            '{
+              new StructSchemaView {
+                override def frameAliases: Seq[String] = ${ frameAliasNames }
+                // TODO: Reintroduce `*` selector
+                // type AllColumns = schema 
+                // override def * : AllColumns = ${ reifyColumns[schema] }.asInstanceOf[AllColumns]
+              }.asInstanceOf[t]
+            }
 
   def allPrefixedColumns(using Quotes)(schemaType: Type[?]): List[(String, (String, quotes.reflect.TypeRepr))] =
     import quotes.reflect.*
@@ -87,6 +102,7 @@ object SchemaView:
         val prefix = Type.valueOfConstant[framePrefix].get.toString
         val colName = Type.valueOfConstant[name].get.toString
         (prefix -> (colName -> TypeRepr.of[name := dataType])) :: allPrefixedColumns(Type.of[tail])
+      // TODO: Handle Nothing as schemaType (which might appear as propagation of earlier errors)
 
   def frameAliasViewsByName(using Quotes)(schemaType: Type[?]): List[(String, quotes.reflect.TypeRepr)] =
     import quotes.reflect.*
@@ -112,6 +128,7 @@ object SchemaView:
         val colName = Type.valueOfConstant[name].get.toString
         val namedColumn = colName -> TypeRepr.of[LabeledColumn[name, dataType]]
         namedColumn :: allColumns(Type.of[tail])
+
 class AliasedSchemaView(frameAliasName: String) extends Selectable:
   def selectDynamic(name: String): LabeledColumn[Name, DataType] =
     val columnName = s"${Name.escape(frameAliasName)}.${Name.escape(name)}"

@@ -17,7 +17,7 @@ object GroupBy:
 
   def groupByImpl[S : Type](df: Expr[StructDataFrame[S]])(using Quotes): Expr[GroupBy[?]] =
     import quotes.reflect.asTerm
-    val viewExpr = SchemaView.schemaViewExpr[StructDataFrame[S]]
+    val viewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[S]]
     viewExpr.asTerm.tpe.asType match
       case '[SchemaView.Subtype[v]] =>
         '{ GroupBy[v](${ viewExpr }.asInstanceOf[v], ${ df }.untyped) }
@@ -26,7 +26,7 @@ object GroupBy:
     import quotes.reflect.*
     Type.of[GroupingColumns] match
       case '[name := colType] =>
-        val groupedViewExpr = SchemaView.schemaViewExpr[StructDataFrame[name := colType]]
+        val groupedViewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[name := colType]]
         groupedViewExpr.asTerm.tpe.asType match
           case '[SchemaView.Subtype[gv]] =>
             '{
@@ -39,7 +39,7 @@ object GroupBy:
             }
 
       case '[TupleSubtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
-        val groupedViewExpr = SchemaView.schemaViewExpr[StructDataFrame[s]]
+        val groupedViewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[s]]
         groupedViewExpr.asTerm.tpe.asType match
           case '[SchemaView.Subtype[gv]] =>
             '{

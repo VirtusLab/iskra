@@ -12,7 +12,7 @@ object WithColumn:
 
   def withColumnImpl[Schema : Type, DF <: StructDataFrame[Schema] : Type](df: Expr[DF])(using Quotes): Expr[WithColumn[Schema, ?]] =
     import quotes.reflect.asTerm
-    val viewExpr = SchemaView.schemaViewExpr[DF]
+    val viewExpr = StructSchemaView.schemaViewExpr[DF]
     viewExpr.asTerm.tpe.asType match
       case '[SchemaView.Subtype[v]] =>
         '{

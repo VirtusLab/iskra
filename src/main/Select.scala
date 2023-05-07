@@ -28,27 +28,27 @@ object Select:
 
   given selectOps: {} with
     extension [View <: SchemaView](select: Select[View])
-      transparent inline def apply(inline columns: View ?=> NamedColumn[?]*): StructDataFrame[?] =
-        ${ selectApplyImpl[View]('select, 'columns) }
+      transparent inline def apply(inline columns: View ?=> NamedColumns[?]*): StructDataFrame[?] =
+        ${ applyImpl[View]('select, 'columns) }
 
-  private def selectApplyImpl[View <: SchemaView : Type](using Quotes)(select: Expr[Select[View]], columns: Expr[Seq[View ?=> NamedColumn[?]]]) =
+  private def applyImpl[View <: SchemaView : Type](using Quotes)(select: Expr[Select[View]], columns: Expr[Seq[View ?=> NamedColumns[?]]]) =
     import quotes.reflect.*
 
-    val cols = columns match
+    val columnValuesWithTypes = columns match
       case Varargs(colExprs) =>
         colExprs.map { arg =>
           val reduced = Term.betaReduce('{$arg(using ${ select }.view)}.asTerm).get
           reduced.asExpr match
-            case '{ $value: v } => ('{ ${ value }.asInstanceOf[Column[?]].untyped }, Type.of[v])
+            case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema])
         }
 
-    val columnValues = cols.map(_._1)
-    val columnTypes = cols.map(_._2)
+    val columnsValues = columnValuesWithTypes.map(_._1)
+    val columnsTypes = columnValuesWithTypes.map(_._2)
 
-    val schemaTpe = FrameSchema.schemaTypeFromColumnTypes(columnTypes)
+    val schemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
     schemaTpe match
       case '[s] =>
         '{
-          val cols = ${ Expr.ofSeq(columnValues) }
+          val cols = ${ Expr.ofSeq(columnsValues) }.flatten
           StructDataFrame[s](${ select }.underlying.select(cols*))
         }

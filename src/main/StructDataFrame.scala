@@ -55,8 +55,8 @@ object StructDataFrame:
       case '[EmptyTuple] => Seq.empty
       case '[head *: tail] => allColumns(Type.of[head]) ++ allColumns(Type.of[tail])
 
-  private def showColumns(columnTypes: Seq[Type[?]])(using Quotes): String =
-    val columns = columnTypes.map {
+  private def showColumns(columnsTypes: Seq[Type[?]])(using Quotes): String =
+    val columns = columnsTypes.map {
       case '[label := dataType] =>
         val shortDataType = Type.show[dataType].split("\\.").last
         s"${Type.show[label]} := ${shortDataType}"

@@ -41,9 +41,9 @@ object FrameSchema:
     case '[label := column] => true
     case _ => false
 
-  def schemaTypeFromColumnTypes(colTypes: Seq[Type[?]])(using Quotes): Type[? <: Tuple] =
+  def schemaTypeFromColumnsTypes(colTypes: Seq[Type[?]])(using Quotes): Type[? <: Tuple] =
     colTypes match
       case Nil => Type.of[EmptyTuple]
-      case '[headTpe] :: tail =>
-        schemaTypeFromColumnTypes(tail) match
-        case '[TupleSubtype[tailTpe]] => Type.of[headTpe *: tailTpe]
+      case '[TupleSubtype[headTpes]] :: tail =>
+        schemaTypeFromColumnsTypes(tail) match
+        case '[TupleSubtype[tailTpes]] => Type.of[Tuple.Concat[headTpes, tailTpes]]

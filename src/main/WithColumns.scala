@@ -24,15 +24,15 @@ object WithColumns:
 
   given withColumnsApply: {} with
     extension [Schema, View <: SchemaView](withColumns: WithColumns[Schema, View])
-      transparent inline def apply[Columns](columns: View ?=> Columns): StructDataFrame[?] =
-        ${ applyImpl[Schema, View, Columns]('withColumns, 'columns) }
+      transparent inline def apply[Cols](columns: View ?=> Cols): StructDataFrame[?] =
+        ${ applyImpl[Schema, View, Cols]('withColumns, 'columns) }
 
-  def applyImpl[Schema : Type, View <: SchemaView : Type, Columns : Type](
+  def applyImpl[Schema : Type, View <: SchemaView : Type, Cols : Type](
     withColumns: Expr[WithColumns[Schema, View]],
-    columns: Expr[View ?=> Columns]
+    columns: Expr[View ?=> Cols]
   )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
-    Type.of[Columns] match
+    Type.of[Cols] match
       case '[name := colType] =>
         val label = Expr(Type.valueOfConstant[name].get.toString)
         '{

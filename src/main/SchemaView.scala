@@ -107,8 +107,8 @@ object StructSchemaView:
   def frameAliasViewsByName(using Quotes)(schemaType: Type[?]): List[(String, quotes.reflect.TypeRepr)] =
     import quotes.reflect.*
     allPrefixedColumns(schemaType).groupBy(_._1).map { (frameName, values) =>
-      val columnTypes = values.map(_._2)
-      frameName -> refineType(TypeRepr.of[AliasedSchemaView], columnTypes)
+      val columnsTypes = values.map(_._2)
+      frameName -> refineType(TypeRepr.of[AliasedSchemaView], columnsTypes)
     }.toList
 
   def unambiguousColumns(using Quotes)(schemaType: Type[?]): List[(String, quotes.reflect.TypeRepr)] =

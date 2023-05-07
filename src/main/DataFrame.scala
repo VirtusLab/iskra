@@ -14,7 +14,6 @@ object DataFrame:
   export Join.dataFrameJoinOps
   export GroupBy.dataFrameGroupByOps
   export Where.dataFrameWhereOps
-  export WithColumn.dataFrameWithColumnOps
   export WithColumns.dataFrameWithColumnsOps
 
   given dataFrameOps: {} with

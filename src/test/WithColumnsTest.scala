@@ -11,14 +11,6 @@ class WithColumnsTest extends SparkUnitTest:
     Foo(1, 2)
   ).toDF.asStruct
 
-  test("withColumn") {
-    val result = foos
-      .withColumn("c", $.a + $.b)
-      .asClass[Bar].collect().toList
-
-    result shouldEqual List(Bar(1, 2, 3))
-  }
-
   test("withColumns-single") {
     val result = foos
       .withColumns(

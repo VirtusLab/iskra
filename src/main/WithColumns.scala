@@ -33,7 +33,7 @@ object WithColumns:
   )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
 
-    val columnValuesWithTypes = columns match
+    val columnValuesWithTypesWithLabels = columns match
       case Varargs(colExprs) =>
         colExprs.map { arg =>
           val reduced = Term.betaReduce('{$arg(using ${ withColumns }.view)}.asTerm).get
@@ -41,9 +41,9 @@ object WithColumns:
             case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema], labelsNames(Type.of[schema]))
         }
 
-    val columnsValues = columnValuesWithTypes.map(_._1)
-    val columnsTypes = columnValuesWithTypes.map(_._2)
-    val columnsNames = columnValuesWithTypes.map(_._3).flatten
+    val columnsValues = columnValuesWithTypesWithLabels.map(_._1)
+    val columnsTypes = columnValuesWithTypesWithLabels.map(_._2)
+    val columnsNames = columnValuesWithTypesWithLabels.map(_._3).flatten
 
     val schemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
     schemaTpe match

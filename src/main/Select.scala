@@ -1,7 +1,6 @@
 package org.virtuslab.iskra
 
 import scala.quoted.*
-import MacroHelpers.TupleSubtype
 
 class Select[View <: SchemaView](val view: View, val underlying: UntypedDataFrame)
 

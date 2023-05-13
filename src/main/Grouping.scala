@@ -13,7 +13,7 @@ object GroupBy:
 
   given groupByOps: {} with
     extension [View <: SchemaView](groupBy: GroupBy[View])
-      transparent inline def apply[GroupingColumns](groupingColumns: View ?=> GroupingColumns) = ${ applyImpl[View, GroupingColumns]('groupBy, 'groupingColumns) }
+      transparent inline def apply(inline groupingColumns: View ?=> NamedColumns[?]*) = ${ applyImpl[View]('groupBy, 'groupingColumns) }
 
   def groupByImpl[S : Type](df: Expr[StructDataFrame[S]])(using Quotes): Expr[GroupBy[?]] =
     import quotes.reflect.asTerm
@@ -22,39 +22,36 @@ object GroupBy:
       case '[SchemaView.Subtype[v]] =>
         '{ GroupBy[v](${ viewExpr }.asInstanceOf[v], ${ df }.untyped) }
 
-  def applyImpl[View <: SchemaView : Type, GroupingColumns : Type](groupBy: Expr[GroupBy[View]], groupingColumns: Expr[View ?=> GroupingColumns])(using Quotes): Expr[GroupedDataFrame[View]] =
+  def applyImpl[View <: SchemaView : Type](groupBy: Expr[GroupBy[View]], groupingColumns: Expr[Seq[View ?=> NamedColumns[?]]])(using Quotes): Expr[GroupedDataFrame[View]] =
     import quotes.reflect.*
-    Type.of[GroupingColumns] match
-      case '[name := colType] =>
-        val groupedViewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[name := colType]]
-        groupedViewExpr.asTerm.tpe.asType match
-          case '[SchemaView.Subtype[gv]] =>
-            '{
-              new GroupedDataFrame[View]:
-                type GroupingKeys = (name := colType) *: EmptyTuple
-                type GroupedView = gv
-                def underlying = ${ groupBy }.underlying.groupBy(${ groupingColumns }(using ${ groupBy }.view).asInstanceOf[name := colType].untyped)
-                def fullView = ${ groupBy }.view
-                def groupedView = ${ groupedViewExpr }.asInstanceOf[GroupedView]
-            }
 
-      case '[TupleSubtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
-        val groupedViewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[s]]
+    val columnValuesWithTypes = groupingColumns match
+      case Varargs(colExprs) =>
+        colExprs.map { arg =>
+          val reduced = Term.betaReduce('{$arg(using ${ groupBy }.view)}.asTerm).get
+          reduced.asExpr match
+            case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema])
+        }
+
+    val columnsValues = columnValuesWithTypes.map(_._1)
+    val columnsTypes = columnValuesWithTypes.map(_._2)
+
+    val groupedSchemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
+    groupedSchemaTpe match
+      case '[TupleSubtype[groupingKeys]] =>
+        val groupedViewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[groupingKeys]]
+
         groupedViewExpr.asTerm.tpe.asType match
-          case '[SchemaView.Subtype[gv]] =>
+          case '[SchemaView.Subtype[groupedView]] =>
             '{
-              val groupingCols = ${ groupingColumns }(using ${ groupBy }.view).asInstanceOf[s].toList.map(_.asInstanceOf[Column[DataType]].untyped)
+              val groupingCols = ${ Expr.ofSeq(columnsValues) }.flatten
               new GroupedDataFrame[View]:
-                type GroupingKeys = s
-                type GroupedView = gv
+                type GroupingKeys = groupingKeys
+                type GroupedView = groupedView
                 def underlying = ${ groupBy }.underlying.groupBy(groupingCols*)
                 def fullView = ${ groupBy }.view
                 def groupedView = ${ groupedViewExpr }.asInstanceOf[GroupedView]
             }
-
-      case '[t] =>
-        val errorMsg = s"""The parameter of `groupBy` should be a named column (e.g. of type: "foo" := StringType) or a tuple of named columns but it has type: ${Type.show[t]}"""
-        report.errorAndAbort(errorMsg, MacroHelpers.callPosition(groupBy))
 
 // TODO: Rename to RelationalGroupedDataset and handle other aggregations: cube, rollup (and pivot?)
 trait GroupedDataFrame[FullView <: SchemaView]:
@@ -69,38 +66,43 @@ trait GroupedDataFrame[FullView <: SchemaView]:
 object GroupedDataFrame:
   given groupedDataFrameOps: {} with
     extension [FullView <: SchemaView, GroupKeys <: Tuple, GroupView <: SchemaView](gdf: GroupedDataFrame[FullView]{ type GroupedView = GroupView; type GroupingKeys = GroupKeys })
-      transparent inline def agg[AggregatedColumns](columns: Agg { type View = FullView } ?=> GroupView ?=> AggregatedColumns): StructDataFrame[?] =
-        ${ aggImpl[FullView, GroupKeys, GroupView, AggregatedColumns]('gdf, 'columns) }
+      transparent inline def agg(inline columns: (Agg { type View = FullView }, GroupView) ?=> NamedColumns[?]*): StructDataFrame[?] =
+        ${ aggImpl[FullView, GroupKeys, GroupView]('gdf, 'columns) }
 
-  def aggImpl[FullView <: SchemaView : Type, GroupingKeys <: Tuple : Type, GroupView <: SchemaView : Type, AggregatedColumns : Type](
+
+  def aggImpl[FullView <: SchemaView : Type, GroupingKeys <: Tuple : Type, GroupView <: SchemaView : Type](
     gdf: Expr[GroupedDataFrame[FullView] { type GroupedView = GroupView }],
-    columns: Expr[Agg { type View = FullView } ?=> GroupView ?=> AggregatedColumns]
+    columns: Expr[Seq[(Agg { type View = FullView }, GroupView) ?=> NamedColumns[?]]]
   )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
+
     val aggWrapper = '{
       new Agg:
         type View = FullView
         val view = ${ gdf }.fullView
     }
-    Type.of[AggregatedColumns] match
-      case '[name := colType] =>
-        '{
-          val col = ${ columns }(using ${ aggWrapper })(using ${ gdf }.groupedView).asInstanceOf[name := colType].untyped
-          StructDataFrame[FrameSchema.Merge[GroupingKeys, name := colType]](
-            ${ gdf }.underlying.agg(col)
-          )
+
+    val columnValuesWithTypes = columns match
+      case Varargs(colExprs) =>
+        colExprs.map { arg =>
+          val reduced = Term.betaReduce('{$arg(using ${ aggWrapper }, ${ gdf }.groupedView)}.asTerm).get
+          reduced.asExpr match
+            case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema])
         }
-      case '[TupleSubtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
+
+    val columnsValues = columnValuesWithTypes.map(_._1)
+    val columnsTypes = columnValuesWithTypes.map(_._2)
+
+    val schemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
+    schemaTpe match
+      case '[s] =>
         '{
-          val cols = ${ columns }(using ${ aggWrapper })(using ${ gdf }.groupedView)
-            .asInstanceOf[s].toList.map(_.asInstanceOf[Column[DataType]].untyped)
+          // TODO assert cols is not empty
+          val cols = ${ Expr.ofSeq(columnsValues) }.flatten
           StructDataFrame[FrameSchema.Merge[GroupingKeys, s]](
             ${ gdf }.underlying.agg(cols.head, cols.tail*)
           )
         }
-      case '[t] =>
-        val errorMsg = s"""The parameter of `agg` should be a named column (e.g. of type: "foo" := StringType) or a tuple of named columns but it has type: ${Type.show[t]}"""
-        report.errorAndAbort(errorMsg, MacroHelpers.callPosition(gdf))
 
 trait Agg:
   type View <: SchemaView

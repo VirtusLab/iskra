@@ -12,7 +12,7 @@ object WithColumns:
 
   def withColumnsImpl[Schema : Type, DF <: StructDataFrame[Schema] : Type](df: Expr[DF])(using Quotes): Expr[WithColumns[Schema, ?]] =
     import quotes.reflect.asTerm
-    val viewExpr = SchemaView.schemaViewExpr[DF]
+    val viewExpr = StructSchemaView.schemaViewExpr[DF]
     viewExpr.asTerm.tpe.asType match
       case '[SchemaView.Subtype[v]] =>
         '{
@@ -23,46 +23,44 @@ object WithColumns:
         }
 
   given withColumnsApply: {} with
-    extension [Schema, View <: SchemaView](withColumns: WithColumns[Schema, View])
-      transparent inline def apply[Columns](columns: View ?=> Columns): StructDataFrame[?] =
-        ${ applyImpl[Schema, View, Columns]('withColumns, 'columns) }
+    extension [Schema <: Tuple, View <: SchemaView](withColumns: WithColumns[Schema, View])
+      transparent inline def apply(inline columns: View ?=> NamedColumns[?]*): StructDataFrame[?] =
+        ${ applyImpl[Schema, View]('withColumns, 'columns) }
 
-  def applyImpl[Schema : Type, View <: SchemaView : Type, Columns : Type](
+  def applyImpl[Schema <: Tuple : Type, View <: SchemaView : Type](
     withColumns: Expr[WithColumns[Schema, View]],
-    columns: Expr[View ?=> Columns]
+    columns: Expr[Seq[View ?=> NamedColumns[?]]]
   )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
-    Type.of[Columns] match
-      case '[name := colType] =>
-        val label = Expr(Type.valueOfConstant[name].get.toString)
-        '{
-          type OutSchema = FrameSchema.Merge[Schema, name := colType]
-          val col = ${ columns }(using ${ withColumns }.view).asInstanceOf[Column[?]].untyped
-          StructDataFrame[OutSchema](
-            ${ withColumns }.underlying.withColumn(${label}, col)
-          )
+
+    val columnValuesWithTypesWithLabels = columns match
+      case Varargs(colExprs) =>
+        colExprs.map { arg =>
+          val reduced = Term.betaReduce('{$arg(using ${ withColumns }.view)}.asTerm).get
+          reduced.asExpr match
+            case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema], labelsNames(Type.of[schema]))
         }
-        
-      case '[TupleSubtype[s]] if FrameSchema.isValidType(Type.of[s]) =>
-        val labels = Expr.ofSeq(labelsNames(Type.of[s]))
+
+    val columnsValues = columnValuesWithTypesWithLabels.map(_._1)
+    val columnsTypes = columnValuesWithTypesWithLabels.map(_._2)
+    val columnsNames = columnValuesWithTypesWithLabels.map(_._3).flatten
+
+    val schemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
+    schemaTpe match
+      case '[TupleSubtype[s]] =>
         '{
-          type OutSchema = FrameSchema.Merge[Schema, s]
-          val cols: Seq[UntypedColumn] = ${ columns }(using ${ withColumns }.view).asInstanceOf[s].toList.map(_.asInstanceOf[Column[?]].untyped)
+          val cols = ${ Expr.ofSeq(columnsValues) }.flatten
           val withColumnsAppended =
-            ${labels}.zip(cols).foldLeft(${ withColumns }.underlying){
+            ${ Expr(columnsNames) }.zip(cols).foldLeft(${ withColumns }.underlying){
               case (df, (label, col)) =>
                 df.withColumn(label, col)
             }
-          StructDataFrame[OutSchema](withColumnsAppended)
+          StructDataFrame[Tuple.Concat[Schema, s]](withColumnsAppended)
         }
 
-      case '[t] =>
-        val errorMsg = s"""The parameter of `withColumns` should be a named column (e.g. of type: "foo" := StringType) or a tuple of named columns but it has type: ${Type.show[t]}"""
-        report.errorAndAbort(errorMsg, MacroHelpers.callPosition(withColumns))
-
-  private def labelsNames(schema: Type[?])(using Quotes): List[Expr[String]] =
+  private def labelsNames(schema: Type[?])(using Quotes): List[String] =
     schema match
       case '[EmptyTuple] => Nil
       case '[(label := column) *: tail] =>
-        val headValue = Expr(Type.valueOfConstant[label].get.toString)
+        val headValue = Type.valueOfConstant[label].get.toString
         headValue :: labelsNames(Type.of[tail])

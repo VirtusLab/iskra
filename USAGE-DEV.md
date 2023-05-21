@@ -3,6 +3,8 @@
 :warning: This library is in its early stage of development - the syntax and type hierarchy might still change,
 the coverage of Spark's API is far from being complete and more tests are needed.
 
+### First steps
+
 1) Add Iskra as a dependency to your project, e.g.
 
 * in a file compiled with Scala CLI:
@@ -20,8 +22,8 @@ the coverage of Spark's API is far from being complete and more tests are needed
   libraryDependencies += "org.virtuslab" %% "iskra" % "0.0.4-SNAPSHOT"
   ```
 
-Iskra is built with Scala 3.1.3 so it's compatible with Scala 3.1.x and newer minor releases (starting from 3.2.0 you'll get code completions for names of columns in REPL and Metals!).
-Iskra transitively depends on Spark 3.2.0.
+  Iskra is built with Scala 3.3.0 so it's compatible with Scala 3.3.x (LTS) and newer minor releases.
+  Iskra transitively depends on Spark 3.2.0.
 
 2) Import the basic definitions from the API
     ```scala
@@ -39,41 +41,44 @@ Iskra transitively depends on Spark 3.2.0.
     ```
 
 4) Create a typed data frame in either of the two ways:
-    a) by using `toDF` extension method on a `Seq` of case classes, e.g.
+    * by using `.toDF` extension method on a `Seq` of case classes, e.g.
       ```scala
       Seq(Foo(1, "abc"), Foo(2, "xyz")).toDF
       ```
-      Note that this variant of `toDF` comes from `org.virtuslab.iskra.api` rather than from `spark.implicits`.
+      Note that this variant of `.toDF` comes from `org.virtuslab.iskra.api` rather than from `spark.implicits`.
 
-    b) by taking a good old (untyped) data frame and calling `typed` extension method on it with a type parameter representing a case class, e.g.
+    * by taking a good old (untyped) data frame and calling `typed` extension method on it with a type parameter representing a case class, e.g.
       ```scala
       df.typed[Foo]
       ```
       In case you needed to get back to the unsafe world of untyped data frames for some reason, just call `.untyped` on a typed data frame.
 
-5) Data frames created as above are called `ClassDataFrame`s as their compile-time schema is represented by a case class. To perform most of operations (e.g. selections, joins, etc.) on such a data frame you'll need to turn it into a structural data frame (`StructDataFrame`) first by calling `.asStruct` on it. (This restriction might be loosened in the future.)
+5) Follow your intuition of a Spark developer :wink: This library is intended to maximally resemble the original API of Spark (e.g. by using the same names of methods, etc.) where possible, although trying to make the code feel more like regular Scala without unnecessary boilerplate but with some other syntactic improvements.
 
-6) On the other hand, some operations (like `.collect()`), can be performed only on a `ClassDataFrame` because they require a specific case class model to be known at compile time. To transform a `StructDataFrame` back to a `ClassDataFrame` with a given case class `A` as model use `.asClass[A]`. 
+6) Look at the [examples](src/test/example/).
 
-7) From now on, just try to follow your intuition of a Spark developer :wink: 
+### Key concepts and differences to untyped Spark
 
-    This library is intended to maximally resemble the original API of Spark (e.g. by using the same names of methods, etc.) where possible, although trying to make the code feel more like regular Scala without unnecessary boilerplate and adding some other syntactic improvements.
+Data frames created with `.toDF` or `.typed` like above are called `ClassDataFrame`s as their compile-time schema is represented by a case class. As an alternative to case classes, schemas of data frames can be expressed structurally. If this is a case, such a data frame is called a `StructDataFrame`. Some data frame operations might be available only for either `ClassDataFrame`s or `StructDataFrame` while some operations are available for both. This depends on the semantics of each operation and on implementational restrictions (which might get lifted in the future). To turn a `ClassDataFrame` into a `StructDataFrame` or vice versa use `.asStruct` or `.asClass[A]` method respectively.
 
-    Most important differences:
-    * Refer to columns (also with prefixes specifying the alias for a dataframe in case of ambiguities) simply with `$.foo.bar` instead of `$"foo.bar"` or `col("foo.bar")`. Use backticks when necessary, e.g. ``$.`column with spaces` ``.
-    * From inside of `.select(...)` or `.select{...}` you should return something that is a named column or a tuple of named columns. Because of how Scala syntax works you can write simply `.select($.x, $.y)` instead of `select(($.x, $.y))`. With braces you can compute intermediate values like
-        ```scala
-        .select {
-          val sum = ($.x + $.y).as("sum")
-          ($.x, $.y, sum)
-        }
-        ```
 
-    *  Syntax for joins looks slightly more like SQL, but with dots and parentheses as for usual method calls, e.g.
-        ```scala
-        foos.innerJoin(bars).on($.foos.barId === $.bars.id).select(...)
-        ```
+When operating on a data frame, `$` represents the schema of this frame, from which columns can be selected like ordinary class memebers. So to refer to a column called `foo` instead of writing `col("foo")` or `$"foo"` write `$.foo`. If the name of a column is not a valid Scala identifier, you can use backticks, e.g. ``$.`column with spaces` ``. Similarly the syntax `$.foo.bar` can be used to refer to a column originating from a specific data frame to avoid ambiguities. This corresponds to `col("foo.bar")` or `$"foo.bar"` in vanilla Spark.
 
-    * As you might have noticed above, the aliases for `foos` and `bars` were automatically inferred
 
-8) For reference look at the [examples](src/test/example/) and the [API docs](https://virtuslab.github.io/iskra/) 
+Some operations like `.select(...)` or `.agg(...)` accept potentially multiple columns as arguments. You can pass individual columns separately, like `.select($.foo, $.bar)` or you can aggregate them usings `Columns(...)`, i.e. `select(Columns($.foo, $.bar))`. `Columns` will eventually get flattened so these who syntaxes are semantically equivalent. However, `Columns(...)` syntax might come in handy e.g. if you needed to embed a block of code as an argument to `.select { ... }`, e.g.
+  ```scala
+  .select {
+    val sum = ($.x + $.y).as("sum")
+    Columns($.x, $.y, sum)
+  }
+  ```
+
+The syntax for joins looks slightly more like SQL, but with dots and parentheses as for usual method calls, e.g.
+  ```scala
+  foos.innerJoin(bars).on($.foos.barId === $.bars.id).select(...)
+  ```
+
+  As you might have noticed above, the aliases for `foos` and `bars` were automatically inferred so you don't have to write
+  ```scala
+  foos.as("foos").innerJoin(bars.as("bars"))
+  ```

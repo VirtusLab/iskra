@@ -14,7 +14,7 @@ object Where:
 
   def whereImpl[Schema : Type](df: Expr[StructDataFrame[Schema]])(using Quotes): Expr[Where[Schema, ?]] =
     import quotes.reflect.asTerm
-    val viewExpr = SchemaView.schemaViewExpr[StructDataFrame[Schema]]
+    val viewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[Schema]]
     viewExpr.asTerm.tpe.asType match
       case '[SchemaView.Subtype[v]] =>
         '{

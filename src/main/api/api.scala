@@ -25,7 +25,7 @@ export types.{
 }
 export UntypedOps.typed
 export org.virtuslab.iskra.$
-export org.virtuslab.iskra.{Column, DataFrame, ClassDataFrame, StructDataFrame, UntypedColumn, UntypedDataFrame, :=, /}
+export org.virtuslab.iskra.{Column, Columns, DataFrame, ClassDataFrame, NamedColumns, StructDataFrame, UntypedColumn, UntypedDataFrame, :=, /}
 
 object functions:
   export org.virtuslab.iskra.functions.{lit, when}

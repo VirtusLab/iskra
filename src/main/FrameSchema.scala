@@ -2,7 +2,7 @@ package org.virtuslab.iskra
 
 import scala.quoted.*
 import scala.deriving.Mirror
-import types.DataType
+import types.{DataType, Encoder, StructEncoder}
 import MacroHelpers.TupleSubtype
 
 object FrameSchema:
@@ -40,3 +40,10 @@ object FrameSchema:
     case '[(label := column) *: tail] => isValidType(Type.of[tail])
     case '[label := column] => true
     case _ => false
+
+  def schemaTypeFromColumnsTypes(colTypes: Seq[Type[?]])(using Quotes): Type[? <: Tuple] =
+    colTypes match
+      case Nil => Type.of[EmptyTuple]
+      case '[TupleSubtype[headTpes]] :: tail =>
+        schemaTypeFromColumnsTypes(tail) match
+        case '[TupleSubtype[tailTpes]] => Type.of[Tuple.Concat[headTpes, tailTpes]]

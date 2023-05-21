@@ -38,7 +38,7 @@ import functions.lit
     .select {
       val salary = (lit(4732) + $.subordinates.yearsInCompany * lit(214)).as("salary")
       val supervisor = ($.supervisors.firstName ++ lit(" ") ++ $.supervisors.lastName).as("supervisor")
-      ($.subordinates.firstName, $.subordinates.lastName, supervisor, salary)
+      Columns($.subordinates.firstName, $.subordinates.lastName, supervisor, salary)
     }
     .where($.salary > lit(5000))
     .show()

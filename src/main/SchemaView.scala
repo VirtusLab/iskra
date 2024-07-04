@@ -68,7 +68,7 @@ object StructSchemaView:
   //       headLabel1 match
   //         case '[Name.Subtype[name]] => // TODO: handle frame prefixes
   //           val label = Expr(Type.valueOfConstant[name].get.toString)
-  //           '{ Column[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
+  //           '{ Col[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
 
   def schemaViewExpr[DF <: StructDataFrame[?] : Type](using Quotes): Expr[StructSchemaView] =
     import quotes.reflect.*

@@ -11,7 +11,7 @@ object StructDataFrame:
   type Subtype[T <: StructDataFrame[?]] = T
   type WithAlias[T <: String & Singleton] = StructDataFrame[?] { type Alias = T }
 
-  extension [Schema <: Tuple](df: StructDataFrame[Schema])
+  extension [Schema](df: StructDataFrame[Schema])
     inline def asClass[A]: ClassDataFrame[A] = ${ asClassImpl[Schema, A]('df) }
 
   private def asClassImpl[FrameSchema : Type, A : Type](df: Expr[StructDataFrame[FrameSchema]])(using Quotes): Expr[ClassDataFrame[A]] =

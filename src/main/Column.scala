@@ -1,5 +1,7 @@
 package org.virtuslab.iskra
 
+import scala.language.implicitConversions
+
 import scala.quoted.*
 
 import org.apache.spark.sql.{Column => UntypedColumn}
@@ -32,15 +34,33 @@ object Columns:
           new NamedColumns[s](cols) {}
         }
 
-abstract class Column(val untyped: UntypedColumn):
+class Column(val untyped: UntypedColumn):
   inline def name(using v: ValueOf[Name]): Name = v.value
 
 object Column:
+  implicit transparent inline def columnToLabeledColumn(inline col: Col[?]): LabeledColumn[?, ?] =
+    ${ columnToLabeledColumnImpl('col) }
+
+  private def columnToLabeledColumnImpl(col: Expr[Col[?]])(using Quotes): Expr[LabeledColumn[?, ?]] =
+    import quotes.reflect.*
+    col match
+      case '{ ($v: StructuralSchemaView).selectDynamic($nm: Name).$asInstanceOf$[Col[tp]] } =>
+        nm.asTerm.tpe.asType match
+          case '[Name.Subtype[n]] =>
+            '{ LabeledColumn[n, tp](${ col }.untyped.as(${ nm })) }
+      case '{ $c: Col[tp] } =>
+        col.asTerm match
+          case Inlined(_, _, Ident(name)) =>
+            ConstantType(StringConstant(name)).asType match
+              case '[Name.Subtype[n]] =>
+                val alias = Literal(StringConstant(name)).asExprOf[Name]
+                '{ LabeledColumn[n, tp](${ col }.untyped.as(${ alias })) }
+
   extension [T <: DataType](col: Col[T])
-    inline def as[N <: Name](name: N)(using v: ValueOf[N]): LabeledColumn[N, T] =
-      LabeledColumn[N, T](col.untyped.as(v.value))
-    inline def alias[N <: Name](name: N)(using v: ValueOf[N]): LabeledColumn[N, T] =
-      LabeledColumn[N, T](col.untyped.as(v.value))
+    inline def as[N <: Name](name: N): LabeledColumn[N, T] =
+      LabeledColumn[N, T](col.untyped.as(name))
+    inline def alias[N <: Name](name: N): LabeledColumn[N, T] =
+      LabeledColumn[N, T](col.untyped.as(name))
 
   extension [T1 <: DataType](col1: Col[T1])
     inline def +[T2 <: DataType](col2: Col[T2])(using op: ColumnOp.Plus[T1, T2]): Col[op.Out] = op(col1, col2)
@@ -60,15 +80,13 @@ object Column:
 class Col[+T <: DataType](untyped: UntypedColumn) extends Column(untyped)
 
 @annotation.showAsInfix
-class :=[L <: LabeledColumn.Label, T <: DataType](untyped: UntypedColumn)
-  extends Col[T](untyped)
-  with NamedColumns[(L := T) *: EmptyTuple](Seq(untyped))
+trait :=[L <: LabeledColumn.Label, T <: DataType]
 
 @annotation.showAsInfix
 trait /[+Prefix <: Name, +Suffix <: Name]
 
-type LabeledColumn[L <: LabeledColumn.Label, T <: DataType] = :=[L, T]
+class LabeledColumn[L <: Name, T <: DataType](untyped: UntypedColumn)
+  extends NamedColumns[(L := T) *: EmptyTuple](Seq(untyped))
 
 object LabeledColumn:
   type Label = Name | (Name / Name)
-  def apply[L <: LabeledColumn.Label, T <: DataType](untyped: UntypedColumn) = new :=[L, T](untyped)

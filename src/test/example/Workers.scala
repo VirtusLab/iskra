@@ -36,9 +36,9 @@ import functions.lit
     .leftJoin(supervisions).on($.subordinates.id === $.subordinateId)
     .leftJoin(workers.as("supervisors")).on($.supervisorId === $.supervisors.id)
     .select {
-      val salary = (lit(4732) + $.subordinates.yearsInCompany * lit(214)).as("salary")
-      val supervisor = ($.supervisors.firstName ++ lit(" ") ++ $.supervisors.lastName).as("supervisor")
-      Columns($.subordinates.firstName, $.subordinates.lastName, supervisor, salary)
+      val salary = lit(4732) + $.subordinates.yearsInCompany * lit(214)
+      val supervisor = $.supervisors.firstName ++ lit(" ") ++ $.supervisors.lastName
+      ($.subordinates.firstName, $.subordinates.lastName, supervisor, salary)
     }
     .where($.salary > lit(5000))
     .show()

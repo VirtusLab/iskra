@@ -21,17 +21,21 @@ object SchemaView:
       case '[StructDataFrame.Subtype[df]] =>
         Some(StructSchemaView.schemaViewExpr[df])
 
-trait StructSchemaView extends SchemaView, Selectable:
+trait StructuralSchemaView extends SchemaView, Selectable:
+  def selectDynamic(name: String): AliasedSchemaView | Column
+
+trait StructSchemaView extends StructuralSchemaView:
   def frameAliases: Seq[String] // TODO: get rid of this at runtime
   
   // TODO: What should be the semantics of `*`? How to handle ambiguous columns?
   // type AllColumns <: Tuple
   // def * : AllColumns
-  
-  def selectDynamic(name: String): AliasedSchemaView | LabeledColumn[?, ?] =
+
+  override def selectDynamic(name: String): AliasedSchemaView | Column =
     if frameAliases.contains(name)
       then AliasedSchemaView(name)
-      else LabeledColumn(col(Name.escape(name)))
+      else Col[DataType](col(Name.escape(name)))
+
 
 object StructSchemaView:
   type Subtype[T <: StructSchemaView] = T
@@ -48,14 +52,15 @@ object StructSchemaView:
     import quotes.reflect.*
     schemaType match
       case '[EmptyTuple] => base
-      case '[LabeledColumn[headLabel, headType] *: tail] => // TODO: get rid of duplicates
-        val nameType = Type.of[headLabel] match
-          case '[Name.Subtype[name]] => Type.of[name]
-          case '[(Name.Subtype[framePrefix], Name.Subtype[name])] => Type.of[name]
+      case '[(headLabelPrefix / headLabelName := headType) *: tail] => // TODO: get rid of duplicates
+        val nameType = Type.of[headLabelName] match
+          case '[Name.Subtype[name]] =>
+            Type.of[name]
+          case '[(Name.Subtype[framePrefix], Name.Subtype[name])] =>
+            Type.of[name]
         val name = nameType match
           case '[n] => Type.valueOfConstant[n].get.toString
-        val info = TypeRepr.of[LabeledColumn[headLabel, headType]]
-        val newBase = Refinement(base, name, info)
+        val newBase = Refinement(base, name, TypeRepr.of[Col[headType]])
         schemaViewType(newBase, Type.of[tail])
 
   // private def reifyColumns[T <: Tuple : Type](using Quotes): Expr[Tuple] = reifyCols(Type.of[T])
@@ -64,11 +69,11 @@ object StructSchemaView:
   //   import quotes.reflect.*
   //   schemaType match
   //     case '[EmptyTuple] => '{ EmptyTuple }
-  //     case '[LabeledColumn[headLabel1, headType] *: tail] =>
+  //     case '[(headLabel1 := headType) *: tail] =>
   //       headLabel1 match
   //         case '[Name.Subtype[name]] => // TODO: handle frame prefixes
   //           val label = Expr(Type.valueOfConstant[name].get.toString)
-  //           '{ Column[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
+  //           '{ Col[Nothing](col(Name.escape(${ label }))) *: ${ reifyCols(Type.of[tail]) } }
 
   def schemaViewExpr[DF <: StructDataFrame[?] : Type](using Quotes): Expr[StructSchemaView] =
     import quotes.reflect.*
@@ -94,6 +99,7 @@ object StructSchemaView:
 
   def allPrefixedColumns(using Quotes)(schemaType: Type[?]): List[(String, (String, quotes.reflect.TypeRepr))] =
     import quotes.reflect.*
+
     schemaType match
       case '[EmptyTuple] => List.empty
       case '[(Name.Subtype[name] := dataType) *: tail] =>
@@ -101,8 +107,11 @@ object StructSchemaView:
       case '[(framePrefix / name := dataType) *: tail] =>
         val prefix = Type.valueOfConstant[framePrefix].get.toString
         val colName = Type.valueOfConstant[name].get.toString
-        (prefix -> (colName -> TypeRepr.of[name := dataType])) :: allPrefixedColumns(Type.of[tail])
-      // TODO: Handle Nothing as schemaType (which might appear as propagation of earlier errors)
+        (prefix -> (colName -> TypeRepr.of[Col[dataType]])) :: allPrefixedColumns(Type.of[tail])
+
+      // TODO Show this case to users as propagated error
+      case _ =>
+        List.empty
 
   def frameAliasViewsByName(using Quotes)(schemaType: Type[?]): List[(String, quotes.reflect.TypeRepr)] =
     import quotes.reflect.*
@@ -120,16 +129,20 @@ object StructSchemaView:
     import quotes.reflect.*
     schemaType match
       case '[EmptyTuple] => List.empty
-      case '[LabeledColumn[Name.Subtype[name], dataType] *: tail] =>
+      case '[(Name.Subtype[name] := dataType) *: tail] =>
         val colName = Type.valueOfConstant[name].get.toString
-        val namedColumn = colName -> TypeRepr.of[LabeledColumn[name, dataType]]
+        val namedColumn = colName -> TypeRepr.of[Col[dataType]]
         namedColumn :: allColumns(Type.of[tail])
-      case '[LabeledColumn[Name.Subtype[framePrefix] / Name.Subtype[name], dataType] *: tail] =>
+      case '[((Name.Subtype[framePrefix] / Name.Subtype[name]) := dataType) *: tail] =>
         val colName = Type.valueOfConstant[name].get.toString
-        val namedColumn = colName -> TypeRepr.of[LabeledColumn[name, dataType]]
+        val namedColumn = colName -> TypeRepr.of[Col[dataType]]
         namedColumn :: allColumns(Type.of[tail])
 
-class AliasedSchemaView(frameAliasName: String) extends Selectable:
-  def selectDynamic(name: String): LabeledColumn[Name, DataType] =
+      // TODO Show this case to users as propagated error
+      case _ =>
+        List.empty
+
+class AliasedSchemaView(frameAliasName: String) extends StructuralSchemaView:
+  override def selectDynamic(name: String): Column =
     val columnName = s"${Name.escape(frameAliasName)}.${Name.escape(name)}"
-    LabeledColumn[Name, DataType](col(columnName))
+    Col[DataType](col(columnName))

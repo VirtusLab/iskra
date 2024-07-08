@@ -24,43 +24,27 @@ object WithColumns:
 
   given withColumnsApply: {} with
     extension [Schema <: Tuple, View <: SchemaView](withColumns: WithColumns[Schema, View])
-      transparent inline def apply(inline columns: View ?=> NamedColumns[?]*): StructDataFrame[?] =
-        ${ applyImpl[Schema, View]('withColumns, 'columns) }
+      transparent inline def apply[C <: NamedColumns](columns: View ?=> C): StructDataFrame[?] =
+        ${ applyImpl[Schema, View, C]('withColumns, 'columns) }
 
-  def applyImpl[Schema <: Tuple : Type, View <: SchemaView : Type](
+  private def applyImpl[Schema <: Tuple : Type, View <: SchemaView : Type, C : Type](
     withColumns: Expr[WithColumns[Schema, View]],
-    columns: Expr[Seq[View ?=> NamedColumns[?]]]
+    columns: Expr[View ?=> C]
   )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
 
-    val columnValuesWithTypesWithLabels = columns match
-      case Varargs(colExprs) =>
-        colExprs.map { arg =>
-          val reduced = Term.betaReduce('{$arg(using ${ withColumns }.view)}.asTerm).get
-          reduced.asExpr match
-            case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema], labelsNames(Type.of[schema]))
-        }
-
-    val columnsValues = columnValuesWithTypesWithLabels.map(_._1)
-    val columnsTypes = columnValuesWithTypesWithLabels.map(_._2)
-    val columnsNames = columnValuesWithTypesWithLabels.map(_._3).flatten
-
-    val schemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
-    schemaTpe match
-      case '[TupleSubtype[s]] =>
-        '{
-          val cols = ${ Expr.ofSeq(columnsValues) }.flatten
-          val withColumnsAppended =
-            ${ Expr(columnsNames) }.zip(cols).foldLeft(${ withColumns }.underlying){
-              case (df, (label, col)) =>
-                df.withColumn(label, col)
-            }
-          StructDataFrame[Tuple.Concat[Schema, s]](withColumnsAppended)
-        }
-
-  private def labelsNames(schema: Type[?])(using Quotes): List[String] =
-    schema match
-      case '[EmptyTuple] => Nil
-      case '[(label := column) *: tail] =>
-        val headValue = Type.valueOfConstant[label].get.toString
-        headValue :: labelsNames(Type.of[tail])
+    Expr.summon[CollectColumns[C]] match
+      case Some(collectColumns) =>
+        collectColumns match
+          case '{ $cc: CollectColumns[?] { type CollectedColumns = collectedColumns } } =>
+            Type.of[collectedColumns] match
+              case '[TupleSubtype[collectedCols]] =>
+                '{
+                  val cols = 
+                    org.apache.spark.sql.functions.col("*") +: ${ cc }.underlyingColumns(${ columns }(using ${ withColumns }.view))
+                  val withColumnsAppended =                    
+                    ${ withColumns }.underlying.select(cols*)
+                  StructDataFrame[Tuple.Concat[Schema, collectedCols]](withColumnsAppended)
+                }
+      case None =>
+        throw CollectColumns.CannotCollectColumns(Type.show[C])

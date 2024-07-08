@@ -73,7 +73,7 @@ object JoinOnCondition:
     import quotes.reflect.*
 
     '{ ${ condition }(using ${ joiningView }) } match
-      case '{ $cond: Column[BooleanOptType] } =>
+      case '{ $cond: Col[BooleanOptType] } =>
         '{
           val joined = ${ join }.left.join(${ join }.right, ${ cond }.untyped, JoinType.typeName[T])
           StructDataFrame[JoinedSchema](joined)

@@ -13,45 +13,38 @@ object GroupBy:
 
   given groupByOps: {} with
     extension [View <: SchemaView](groupBy: GroupBy[View])
-      transparent inline def apply(inline groupingColumns: View ?=> NamedColumns[?]*) = ${ applyImpl[View]('groupBy, 'groupingColumns) }
+      transparent inline def apply[C <: NamedColumns](groupingColumns: View ?=> C) = ${ applyImpl[View, C]('groupBy, 'groupingColumns) }
 
-  def groupByImpl[S : Type](df: Expr[StructDataFrame[S]])(using Quotes): Expr[GroupBy[?]] =
+  private def groupByImpl[S : Type](df: Expr[StructDataFrame[S]])(using Quotes): Expr[GroupBy[?]] =
     import quotes.reflect.asTerm
     val viewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[S]]
     viewExpr.asTerm.tpe.asType match
       case '[SchemaView.Subtype[v]] =>
         '{ GroupBy[v](${ viewExpr }.asInstanceOf[v], ${ df }.untyped) }
 
-  def applyImpl[View <: SchemaView : Type](groupBy: Expr[GroupBy[View]], groupingColumns: Expr[Seq[View ?=> NamedColumns[?]]])(using Quotes): Expr[GroupedDataFrame[View]] =
+  private def applyImpl[View <: SchemaView : Type, C : Type](groupBy: Expr[GroupBy[View]], groupingColumns: Expr[View ?=> C])(using Quotes): Expr[GroupedDataFrame[View]] =
     import quotes.reflect.*
 
-    val columnValuesWithTypes = groupingColumns match
-      case Varargs(colExprs) =>
-        colExprs.map { arg =>
-          val reduced = Term.betaReduce('{$arg(using ${ groupBy }.view)}.asTerm).get
-          reduced.asExpr match
-            case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema])
-        }
-
-    val columnsValues = columnValuesWithTypes.map(_._1)
-    val columnsTypes = columnValuesWithTypes.map(_._2)
-
-    val groupedSchemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
-    groupedSchemaTpe match
-      case '[TupleSubtype[groupingKeys]] =>
-        val groupedViewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[groupingKeys]]
-
-        groupedViewExpr.asTerm.tpe.asType match
-          case '[SchemaView.Subtype[groupedView]] =>
-            '{
-              val groupingCols = ${ Expr.ofSeq(columnsValues) }.flatten
-              new GroupedDataFrame[View]:
-                type GroupingKeys = groupingKeys
-                type GroupedView = groupedView
-                def underlying = ${ groupBy }.underlying.groupBy(groupingCols*)
-                def fullView = ${ groupBy }.view
-                def groupedView = ${ groupedViewExpr }.asInstanceOf[GroupedView]
-            }
+    Expr.summon[CollectColumns[C]] match
+      case Some(collectColumns) =>
+        collectColumns match
+          case '{ $cc: CollectColumns[?] { type CollectedColumns = collectedColumns } } =>
+            Type.of[collectedColumns] match
+              case '[TupleSubtype[collectedCols]] =>
+                val groupedViewExpr = StructSchemaView.schemaViewExpr[StructDataFrame[collectedCols]]
+                groupedViewExpr.asTerm.tpe.asType match
+                  case '[SchemaView.Subtype[groupedView]] =>
+                    '{
+                      val groupingCols = ${ cc }.underlyingColumns(${ groupingColumns }(using ${ groupBy }.view))
+                      new GroupedDataFrame[View]:
+                        type GroupingKeys = collectedCols
+                        type GroupedView = groupedView
+                        def underlying = ${ groupBy }.underlying.groupBy(groupingCols*)
+                        def fullView = ${ groupBy }.view
+                        def groupedView = ${ groupedViewExpr }.asInstanceOf[GroupedView]
+                    }
+      case None =>
+        throw CollectColumns.CannotCollectColumns(Type.show[C])
 
 // TODO: Rename to RelationalGroupedDataset and handle other aggregations: cube, rollup (and pivot?)
 trait GroupedDataFrame[FullView <: SchemaView]:
@@ -66,13 +59,12 @@ trait GroupedDataFrame[FullView <: SchemaView]:
 object GroupedDataFrame:
   given groupedDataFrameOps: {} with
     extension [FullView <: SchemaView, GroupKeys <: Tuple, GroupView <: SchemaView](gdf: GroupedDataFrame[FullView]{ type GroupedView = GroupView; type GroupingKeys = GroupKeys })
-      transparent inline def agg(inline columns: (Agg { type View = FullView }, GroupView) ?=> NamedColumns[?]*): StructDataFrame[?] =
-        ${ aggImpl[FullView, GroupKeys, GroupView]('gdf, 'columns) }
+      transparent inline def agg[C <: NamedColumns](columns: (Agg { type View = FullView }, GroupView) ?=> C): StructDataFrame[?] =
+        ${ aggImpl[FullView, GroupKeys, GroupView, C]('gdf, 'columns) }
 
-
-  def aggImpl[FullView <: SchemaView : Type, GroupingKeys <: Tuple : Type, GroupView <: SchemaView : Type](
+  private def aggImpl[FullView <: SchemaView : Type, GroupingKeys <: Tuple : Type, GroupView <: SchemaView : Type, C : Type](
     gdf: Expr[GroupedDataFrame[FullView] { type GroupedView = GroupView }],
-    columns: Expr[Seq[(Agg { type View = FullView }, GroupView) ?=> NamedColumns[?]]]
+    columns: Expr[(Agg { type View = FullView }, GroupView) ?=> C]
   )(using Quotes): Expr[StructDataFrame[?]] =
     import quotes.reflect.*
 
@@ -82,27 +74,19 @@ object GroupedDataFrame:
         val view = ${ gdf }.fullView
     }
 
-    val columnValuesWithTypes = columns match
-      case Varargs(colExprs) =>
-        colExprs.map { arg =>
-          val reduced = Term.betaReduce('{$arg(using ${ aggWrapper }, ${ gdf }.groupedView)}.asTerm).get
-          reduced.asExpr match
-            case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema])
-        }
-
-    val columnsValues = columnValuesWithTypes.map(_._1)
-    val columnsTypes = columnValuesWithTypes.map(_._2)
-
-    val schemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
-    schemaTpe match
-      case '[s] =>
-        '{
-          // TODO assert cols is not empty
-          val cols = ${ Expr.ofSeq(columnsValues) }.flatten
-          StructDataFrame[FrameSchema.Merge[GroupingKeys, s]](
-            ${ gdf }.underlying.agg(cols.head, cols.tail*)
-          )
-        }
+    Expr.summon[CollectColumns[C]] match
+      case Some(collectColumns) =>
+        collectColumns match
+          case '{ $cc: CollectColumns[?] { type CollectedColumns = collectedColumns } } =>
+            '{
+              // TODO assert cols is not empty
+              val cols = ${ cc }.underlyingColumns(${ columns }(using ${ aggWrapper }, ${ gdf }.groupedView))
+              StructDataFrame[FrameSchema.Merge[GroupingKeys, collectedColumns]](
+                ${ gdf }.underlying.agg(cols.head, cols.tail*)
+              )
+            }
+      case None =>
+        throw CollectColumns.CannotCollectColumns(Type.show[C])
 
 trait Agg:
   type View <: SchemaView

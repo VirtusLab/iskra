@@ -3,7 +3,7 @@ package org.virtuslab.iskra
 import scala.quoted.*
 import org.apache.spark.sql
 import org.apache.spark.sql.functions.concat
-import org.virtuslab.iskra.{Column as Col}
+import org.virtuslab.iskra.Col
 import org.virtuslab.iskra.UntypedOps.typed
 import org.virtuslab.iskra.types.*
 import DataType.*

@@ -36,7 +36,7 @@ object Where:
     import quotes.reflect.*
 
     '{ ${ condition }(using ${ where }.view) } match
-      case '{ $cond: Column[BooleanOptType] } =>
+      case '{ $cond: Col[BooleanOptType] } =>
         '{
           val filtered = ${ where }.underlying.where(${ cond }.untyped)
           StructDataFrame[Schema](filtered)

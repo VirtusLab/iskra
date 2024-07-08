@@ -21,12 +21,35 @@ class WithColumnsTest extends SparkUnitTest:
     result shouldEqual List(Bar(1, 2, 3))
   }
 
+  test("withColumns-single-autoAliased") {
+    val result = foos
+      .withColumns {
+        val c = ($.a + $.b)
+        c
+      }
+      .asClass[Bar].collect().toList
+
+    result shouldEqual List(Bar(1, 2, 3))
+  }
+
   test("withColumns-many") {
     val result = foos
       .withColumns(
         ($.a + $.b).as("c"),
         ($.a - $.b).as("d"),
       )
+      .asClass[Baz].collect().toList
+
+    result shouldEqual List(Baz(1, 2, 3, -1))
+  }
+
+  test("withColumns-many-autoAliased") {
+    val result = foos
+      .withColumns{ 
+        val c = ($.a + $.b)
+        val d = ($.a - $.b)
+        (c, d)
+      }
       .asClass[Baz].collect().toList
 
     result shouldEqual List(Baz(1, 2, 3, -1))

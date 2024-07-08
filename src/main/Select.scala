@@ -27,27 +27,27 @@ object Select:
 
   given selectOps: {} with
     extension [View <: SchemaView](select: Select[View])
-      transparent inline def apply(inline columns: View ?=> NamedColumns[?]*): StructDataFrame[?] =
-        ${ applyImpl[View]('select, 'columns) }
+      transparent inline def apply[C <: NamedColumns](columns: View ?=> C): StructDataFrame[?] =
+        ${ applyImpl[View, C]('select, 'columns) }
 
-  private def applyImpl[View <: SchemaView : Type](using Quotes)(select: Expr[Select[View]], columns: Expr[Seq[View ?=> NamedColumns[?]]]) =
+  private def applyImpl[View <: SchemaView : Type, C : Type](using Quotes)(select: Expr[Select[View]], columns: Expr[View ?=> C]) =
     import quotes.reflect.*
 
-    val columnValuesWithTypes = columns match
-      case Varargs(colExprs) =>
-        colExprs.map { arg =>
-          val reduced = Term.betaReduce('{$arg(using ${ select }.view)}.asTerm).get
-          reduced.asExpr match
-            case '{ $value: NamedColumns[schema] } => ('{ ${ value }.underlyingColumns }, Type.of[schema])
-        }
+    Expr.summon[CollectColumns[C]] match
+      case Some(collectColumns) =>
+        collectColumns match
+          case '{ $cc: CollectColumns[?] { type CollectedColumns = collectedColumns } } =>
+            Type.of[collectedColumns] match
+              case '[head *: EmptyTuple] =>
+                '{
+                  val cols = ${ cc }.underlyingColumns(${ columns }(using ${ select }.view))
+                  StructDataFrame[head](${ select }.underlying.select(cols*))
+                }
 
-    val columnsValues = columnValuesWithTypes.map(_._1)
-    val columnsTypes = columnValuesWithTypes.map(_._2)
-
-    val schemaTpe = FrameSchema.schemaTypeFromColumnsTypes(columnsTypes)
-    schemaTpe match
-      case '[s] =>
-        '{
-          val cols = ${ Expr.ofSeq(columnsValues) }.flatten
-          StructDataFrame[s](${ select }.underlying.select(cols*))
-        }
+              case '[s] =>
+                '{
+                  val cols = ${ cc }.underlyingColumns(${ columns }(using ${ select }.view))
+                  StructDataFrame[s](${ select }.underlying.select(cols*))
+                }
+      case None =>
+        throw CollectColumns.CannotCollectColumns(Type.show[C])

@@ -30,11 +30,6 @@ trait StructSchemaView extends StructuralSchemaView:
   // TODO: What should be the semantics of `*`? How to handle ambiguous columns?
   // type AllColumns <: Tuple
   // def * : AllColumns
-  
-  // def selectDynamic(name: String): AliasedSchemaView | LabeledColumn[?, ?] =
-  //   if frameAliases.contains(name)
-  //     then AliasedSchemaView(name)
-  //     else LabeledColumn(col(Name.escape(name)))
 
   override def selectDynamic(name: String): AliasedSchemaView | Column =
     if frameAliases.contains(name)

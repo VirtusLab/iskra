@@ -24,7 +24,7 @@ object WithColumns:
 
   given withColumnsApply: {} with
     extension [Schema <: Tuple, View <: SchemaView](withColumns: WithColumns[Schema, View])
-      transparent inline def apply[C <: Repeated[NamedColumns[?]]](columns: View ?=> C): StructDataFrame[?] =
+      transparent inline def apply[C <: NamedColumns](columns: View ?=> C): StructDataFrame[?] =
         ${ applyImpl[Schema, View, C]('withColumns, 'columns) }
 
   private def applyImpl[Schema <: Tuple : Type, View <: SchemaView : Type, C : Type](

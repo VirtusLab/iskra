@@ -27,7 +27,7 @@ object Select:
 
   given selectOps: {} with
     extension [View <: SchemaView](select: Select[View])
-      transparent inline def apply[C <: Repeated[NamedColumns[?]]](columns: View ?=> C): StructDataFrame[?] =
+      transparent inline def apply[C <: NamedColumns](columns: View ?=> C): StructDataFrame[?] =
         ${ applyImpl[View, C]('select, 'columns) }
 
   private def applyImpl[View <: SchemaView : Type, C : Type](using Quotes)(select: Expr[Select[View]], columns: Expr[View ?=> C]) =

@@ -13,7 +13,7 @@ object GroupBy:
 
   given groupByOps: {} with
     extension [View <: SchemaView](groupBy: GroupBy[View])
-      transparent inline def apply[C <: Repeated[NamedColumns[?]]](groupingColumns: View ?=> C) = ${ applyImpl[View, C]('groupBy, 'groupingColumns) }
+      transparent inline def apply[C <: NamedColumns](groupingColumns: View ?=> C) = ${ applyImpl[View, C]('groupBy, 'groupingColumns) }
 
   private def groupByImpl[S : Type](df: Expr[StructDataFrame[S]])(using Quotes): Expr[GroupBy[?]] =
     import quotes.reflect.asTerm
@@ -59,7 +59,7 @@ trait GroupedDataFrame[FullView <: SchemaView]:
 object GroupedDataFrame:
   given groupedDataFrameOps: {} with
     extension [FullView <: SchemaView, GroupKeys <: Tuple, GroupView <: SchemaView](gdf: GroupedDataFrame[FullView]{ type GroupedView = GroupView; type GroupingKeys = GroupKeys })
-      transparent inline def agg[C <: Repeated[NamedColumns[?]]](columns: (Agg { type View = FullView }, GroupView) ?=> C): StructDataFrame[?] =
+      transparent inline def agg[C <: NamedColumns](columns: (Agg { type View = FullView }, GroupView) ?=> C): StructDataFrame[?] =
         ${ aggImpl[FullView, GroupKeys, GroupView, C]('gdf, 'columns) }
 
   private def aggImpl[FullView <: SchemaView : Type, GroupingKeys <: Tuple : Type, GroupView <: SchemaView : Type, C : Type](

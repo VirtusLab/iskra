@@ -86,6 +86,14 @@ object Encoder:
     type ColumnType = DoubleOptType
     def catalystType = sql.types.DoubleType
 
+  inline given arrayFromMirror[A](using encoder: Encoder[A]): (Encoder[Seq[A]] { type ColumnType = ArrayOptType[encoder.ColumnType] }) =
+    new Encoder[Seq[A]]:
+      override type ColumnType = ArrayOptType[encoder.ColumnType]
+      override def encode(value: Seq[A]): Any = if (value == null) Seq() else value.map(encoder.encode)
+      override def decode(value: Any): Any = Seq(encoder.decode)
+      override def catalystType = sql.types.ArrayType(encoder.catalystType)
+      override def isNullable = true
+
   export StructEncoder.{fromMirror, optFromMirror}
 
 trait StructEncoder[-A] extends Encoder[A]:

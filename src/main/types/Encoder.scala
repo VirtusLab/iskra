@@ -172,7 +172,7 @@ object StructEncoder:
             }
   end fromMirrorImpl
 
-  inline given optFromMirror[A](using encoder: StructEncoder[A]): (Encoder[Option[A]] { type ColumnType = StructOptType[encoder.StructSchema] }) =
+  given optFromMirror[A](using encoder: StructEncoder[A]): (Encoder[Option[A]] { type ColumnType = StructOptType[encoder.StructSchema] }) =
     new Encoder[Option[A]]:
       override type ColumnType = StructOptType[encoder.StructSchema]
       override def encode(value: Option[A]): Any = value.map(encoder.encode).orNull

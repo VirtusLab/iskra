@@ -37,13 +37,7 @@ object Select:
       case Some(collectColumns) =>
         collectColumns match
           case '{ $cc: CollectColumns[?] { type CollectedColumns = collectedColumns } } =>
-            Type.of[collectedColumns] match
-              case '[head *: EmptyTuple] =>
-                '{
-                  val cols = ${ cc }.underlyingColumns(${ columns }(using ${ select }.view))
-                  StructDataFrame[head](${ select }.underlying.select(cols*))
-                }
-
+            Type.of[FrameSchema.FromTuple[collectedColumns]] match
               case '[s] =>
                 '{
                   val cols = ${ cc }.underlyingColumns(${ columns }(using ${ select }.view))

@@ -3,7 +3,7 @@ package org.virtuslab.iskra
 import scala.quoted.*
 import org.apache.spark.sql.functions.col
 import types.DataType
-import MacroHelpers.AsTuple
+import MacroHelpers.TupleSubtype
 
 inline def $(using view: SchemaView): view.type = view
 
@@ -79,7 +79,7 @@ object StructSchemaView:
     import quotes.reflect.*
     Type.of[DF] match
       case '[StructDataFrame[schema]] =>
-        val schemaType = Type.of[AsTuple[schema]]
+        val schemaType = Type.of[FrameSchema.AsTuple[schema]]
         val aliasViewsByName = frameAliasViewsByName(schemaType)
         val columns = unambiguousColumns(schemaType)    
         val frameAliasNames = Expr(aliasViewsByName.map(_._1))

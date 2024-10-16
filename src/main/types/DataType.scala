@@ -34,20 +34,20 @@ object DataType:
     case StructOptType[schema] => StructOptType[schema]
 
   type CommonNumericNullableType[T1 <: DataType, T2 <: DataType] <: NumericOptType = (T1, T2) match
-    case (DoubleOptType, _) | (_, DoubleOptType) => DoubleOptType
-    case (FloatOptType, _) | (_, FloatOptType) => FloatOptType
-    case (LongOptType, _) | (_, LongOptType) => LongOptType
-    case (IntegerOptType, _) | (_, IntegerOptType) => IntegerOptType
-    case (ShortOptType, _) | (_, ShortOptType) => ShortOptType
-    case (ByteOptType, _) | (_, ByteOptType) => ByteOptType
+    case (DoubleOptType, DataType) | (DataType, DoubleOptType) => DoubleOptType
+    case (FloatOptType, DataType) | (DataType, FloatOptType) => FloatOptType
+    case (LongOptType, DataType) | (DataType, LongOptType) => LongOptType
+    case (IntegerOptType, DataType) | (DataType, IntegerOptType) => IntegerOptType
+    case (ShortOptType, DataType) | (DataType, ShortOptType) => ShortOptType
+    case (ByteOptType, DataType) | (DataType, ByteOptType) => ByteOptType
 
   type CommonNumericNonNullableType[T1 <: DataType, T2 <: DataType] <: NumericOptType = (T1, T2) match
-    case (DoubleOptType, _) | (_, DoubleOptType) => DoubleType
-    case (FloatOptType, _) | (_, FloatOptType) => FloatType
-    case (LongOptType, _) | (_, LongOptType) => LongType
-    case (IntegerOptType, _) | (_, IntegerOptType) => IntegerType
-    case (ShortOptType, _) | (_, ShortOptType) => ShortType
-    case (ByteOptType, _) | (_, ByteOptType) => ByteType
+    case (DoubleOptType, DataType) | (DataType, DoubleOptType) => DoubleType
+    case (FloatOptType, DataType) | (DataType, FloatOptType) => FloatType
+    case (LongOptType, DataType) | (DataType, LongOptType) => LongType
+    case (IntegerOptType, DataType) | (DataType, IntegerOptType) => IntegerType
+    case (ShortOptType, DataType) | (DataType, ShortOptType) => ShortType
+    case (ByteOptType, DataType) | (DataType, ByteOptType) => ByteType
 
 import DataType.NotNull
 

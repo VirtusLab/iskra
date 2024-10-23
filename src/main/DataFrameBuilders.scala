@@ -4,7 +4,7 @@ import scala.quoted._
 import org.apache.spark.sql
 import org.apache.spark.sql.SparkSession
 import org.virtuslab.iskra.DataFrame
-import org.virtuslab.iskra.types.{DataType, StructType, Encoder, StructEncoder, PrimitiveEncoder}
+import org.virtuslab.iskra.types.{DataType, Encoder, StructEncoder, PrimitiveEncoder}
 
 object DataFrameBuilders:
   extension [A](seq: Seq[A])(using encoder: Encoder[A])

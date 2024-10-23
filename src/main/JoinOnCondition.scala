@@ -3,7 +3,7 @@ package org.virtuslab.iskra
 import scala.language.implicitConversions
 
 import scala.quoted.*
-import org.virtuslab.iskra.types.BooleanOptType
+import org.virtuslab.iskra.types.BooleanOptLike
 
 trait OnConditionJoiner[Join <: JoinType, Left, Right]
 
@@ -73,7 +73,7 @@ object JoinOnCondition:
     import quotes.reflect.*
 
     '{ ${ condition }(using ${ joiningView }) } match
-      case '{ $cond: Col[BooleanOptType] } =>
+      case '{ $cond: Col[BooleanOptLike] } =>
         '{
           val joined = ${ join }.left.join(${ join }.right, ${ cond }.untyped, JoinType.typeName[T])
           StructDataFrame[JoinedSchema](joined)

@@ -30,67 +30,67 @@ trait PrimitiveNonNullableEncoder[-A] extends PrimitiveEncoder[A]:
 object Encoder:
   type Aux[-A, E <: DataType] = Encoder[A] { type ColumnType = E }
 
-  inline given boolean: PrimitiveNonNullableEncoder[Boolean] with
-    type ColumnType = BooleanType
+  inline given booleanEncoder: PrimitiveNonNullableEncoder[Boolean] with
+    type ColumnType = BooleanNotNull
     def catalystType = sql.types.BooleanType
-  inline given booleanOpt: PrimitiveNullableEncoder[Boolean] with
-    type ColumnType = BooleanOptType
+  inline given booleanOptEncoder: PrimitiveNullableEncoder[Boolean] with
+    type ColumnType = BooleanOrNull
     def catalystType = sql.types.BooleanType
 
-  inline given string: PrimitiveNonNullableEncoder[String] with
-    type ColumnType = StringType
+  inline given stringEncoder: PrimitiveNonNullableEncoder[String] with
+    type ColumnType = StringNotNull
     def catalystType = sql.types.StringType
-  inline given stringOpt: PrimitiveNullableEncoder[String] with
-    type ColumnType = StringOptType
+  inline given stringOptEncoder: PrimitiveNullableEncoder[String] with
+    type ColumnType = StringOrNull
     def catalystType = sql.types.StringType
 
-  inline given byte: PrimitiveNonNullableEncoder[Byte] with
-    type ColumnType = ByteType
+  inline given byteEncoder: PrimitiveNonNullableEncoder[Byte] with
+    type ColumnType = ByteNotNull
     def catalystType = sql.types.ByteType
-  inline given byteOpt: PrimitiveNullableEncoder[Byte] with
-    type ColumnType = ByteOptType
+  inline given byteOptEncoder: PrimitiveNullableEncoder[Byte] with
+    type ColumnType = ByteOrNull
     def catalystType = sql.types.ByteType
 
-  inline given short: PrimitiveNonNullableEncoder[Short] with
-    type ColumnType = ShortType
+  inline given shortEncoder: PrimitiveNonNullableEncoder[Short] with
+    type ColumnType = ShortNotNull
     def catalystType = sql.types.ShortType
-  inline given shortOpt: PrimitiveNullableEncoder[Short] with
-    type ColumnType = ShortOptType
+  inline given shortOptEncoder: PrimitiveNullableEncoder[Short] with
+    type ColumnType = ShortOrNull
     def catalystType = sql.types.ShortType
 
-  inline given int: PrimitiveNonNullableEncoder[Int] with
-    type ColumnType = IntegerType
+  inline given intEncoder: PrimitiveNonNullableEncoder[Int] with
+    type ColumnType = IntNotNull
     def catalystType = sql.types.IntegerType
-  inline given intOpt: PrimitiveNullableEncoder[Int] with
-    type ColumnType = IntegerOptType
+  inline given intOptEncoder: PrimitiveNullableEncoder[Int] with
+    type ColumnType = IntOrNull
     def catalystType = sql.types.IntegerType
 
-  inline given long: PrimitiveNonNullableEncoder[Long] with
-    type ColumnType = LongType
+  inline given longEncoder: PrimitiveNonNullableEncoder[Long] with
+    type ColumnType = LongNotNull
     def catalystType = sql.types.LongType
-  inline given longOpt: PrimitiveNullableEncoder[Long] with
-    type ColumnType = LongOptType
+  inline given longOptEncoder: PrimitiveNullableEncoder[Long] with
+    type ColumnType = LongOrNull
     def catalystType = sql.types.LongType
 
-  inline given float: PrimitiveNonNullableEncoder[Float] with
-    type ColumnType = FloatType
+  inline given floatEncoder: PrimitiveNonNullableEncoder[Float] with
+    type ColumnType = FloatNotNull
     def catalystType = sql.types.FloatType
-  inline given floatOpt: PrimitiveNullableEncoder[Float] with
-    type ColumnType = FloatOptType
+  inline given floatOptEncoder: PrimitiveNullableEncoder[Float] with
+    type ColumnType = FloatOrNull
     def catalystType = sql.types.FloatType
 
-  inline given double: PrimitiveNonNullableEncoder[Double] with
-    type ColumnType = DoubleType
+  inline given doubleEncoder: PrimitiveNonNullableEncoder[Double] with
+    type ColumnType = DoubleNotNull
     def catalystType = sql.types.DoubleType
-  inline given doubleOpt: PrimitiveNullableEncoder[Double] with
-    type ColumnType = DoubleOptType
+  inline given doubleOptEncoder: PrimitiveNullableEncoder[Double] with
+    type ColumnType = DoubleOrNull
     def catalystType = sql.types.DoubleType
 
   export StructEncoder.{fromMirror, optFromMirror}
 
 trait StructEncoder[-A] extends Encoder[A]:
   type StructSchema <: Tuple
-  type ColumnType = StructType[StructSchema]
+  type ColumnType = StructNotNull[StructSchema]
   override def catalystType: sql.types.StructType
   override def encode(a: A): sql.Row
 
@@ -172,9 +172,9 @@ object StructEncoder:
             }
   end fromMirrorImpl
 
-  given optFromMirror[A](using encoder: StructEncoder[A]): (Encoder[Option[A]] { type ColumnType = StructOptType[encoder.StructSchema] }) =
+  given optFromMirror[A](using encoder: StructEncoder[A]): (Encoder[Option[A]] { type ColumnType = StructOrNull[encoder.StructSchema] }) =
     new Encoder[Option[A]]:
-      override type ColumnType = StructOptType[encoder.StructSchema]
+      override type ColumnType = StructOrNull[encoder.StructSchema]
       override def encode(value: Option[A]): Any = value.map(encoder.encode).orNull
       override def decode(value: Any): Any = Option(encoder.decode)
       override def catalystType = encoder.catalystType

@@ -25,7 +25,7 @@ object FrameSchema:
       (S1, S2)
 
   type NullableLabeledDataType[T] = T match
-    case label := tpe => label := DataType.Nullable[tpe]
+    case label := tpe => label := DataType.AsNullable[tpe]
 
   type NullableSchema[T] = T match
     case Tuple => Tuple.Map[T, NullableLabeledDataType]

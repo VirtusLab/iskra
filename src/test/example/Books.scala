@@ -22,7 +22,7 @@ import org.virtuslab.iskra.api.*
   import org.apache.spark.sql.functions.lower
 
   val authorlessBooks = books.select(
-    lower($.title.untyped).typed[StringType].as("title"),
+    lower($.title.untyped).typed[StringNotNull].as("title"),
     $.publicationYear
   )
   authorlessBooks.show()

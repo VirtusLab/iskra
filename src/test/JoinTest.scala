@@ -23,10 +23,10 @@ class JoinTest extends SparkUnitTest:
     val joined = foos.join(bars).on($.foos.int === $.bars.int)
 
     val typedJoined: StructDataFrame[(
-      "foos" / "int" := IntegerType,
-      "foos" / "long" := LongType,
-      "bars" / "int" := IntegerType,
-      "bars" / "string" := StringType
+      "foos" / "int" := IntNotNull,
+      "foos" / "long" := LongNotNull,
+      "bars" / "int" := IntNotNull,
+      "bars" / "string" := StringNotNull
     )] = joined
 
     val result = joined.select(
@@ -45,10 +45,10 @@ class JoinTest extends SparkUnitTest:
     val joined = foos.leftJoin(bars).on($.foos.int === $.bars.int)
 
     val typedJoined: StructDataFrame[(
-      "foos" / "int" := IntegerType,
-      "foos" / "long" := LongType,
-      "bars" / "int" := IntegerOptType,
-      "bars" / "string" := StringOptType
+      "foos" / "int" := IntNotNull,
+      "foos" / "long" := LongNotNull,
+      "bars" / "int" := IntOrNull,
+      "bars" / "string" := StringOrNull
     )] = joined
 
     val result = joined.select(
@@ -68,10 +68,10 @@ class JoinTest extends SparkUnitTest:
     val joined = foos.rightJoin(bars).on($.foos.int === $.bars.int)
 
     val typedJoined: StructDataFrame[(
-      "foos" / "int" := IntegerOptType,
-      "foos" / "long" := LongOptType,
-      "bars" / "int" := IntegerType,
-      "bars" / "string" := StringType
+      "foos" / "int" := IntOrNull,
+      "foos" / "long" := LongOrNull,
+      "bars" / "int" := IntNotNull,
+      "bars" / "string" := StringNotNull
     )] = joined
 
     val result = joined.select(
@@ -91,10 +91,10 @@ class JoinTest extends SparkUnitTest:
     val joined = foos.fullJoin(bars).on($.foos.int === $.bars.int)
 
     val typedJoined: StructDataFrame[(
-      "foos" / "int" := IntegerOptType,
-      "foos" / "long" := LongOptType,
-      "bars" / "int" := IntegerOptType,
-      "bars" / "string" := StringOptType
+      "foos" / "int" := IntOrNull,
+      "foos" / "long" := LongOrNull,
+      "bars" / "int" := IntOrNull,
+      "bars" / "string" := StringOrNull
     )] = joined
 
     val result = joined.select(
@@ -115,8 +115,8 @@ class JoinTest extends SparkUnitTest:
     val joined = foos.semiJoin(bars).on($.foos.int === $.bars.int)
 
     val typedJoined: StructDataFrame[(
-      "foos" / "int" := IntegerType,
-      "foos" / "long" := LongType
+      "foos" / "int" := IntNotNull,
+      "foos" / "long" := LongNotNull
     )] = joined
 
     val result = joined.select(
@@ -133,8 +133,8 @@ class JoinTest extends SparkUnitTest:
     val joined = foos.antiJoin(bars).on($.foos.int === $.bars.int)
 
     val typedJoined: StructDataFrame[(
-      "foos" / "int" := IntegerType,
-      "foos" / "long" := LongType
+      "foos" / "int" := IntNotNull,
+      "foos" / "long" := LongNotNull
     )] = joined
 
     val result = joined.select(
@@ -151,10 +151,10 @@ class JoinTest extends SparkUnitTest:
     val joined = foos.crossJoin(bars)
 
     val typedJoined: StructDataFrame[(
-      "foos" / "int" := IntegerType,
-      "foos" / "long" := LongType,
-      "bars" / "int" := IntegerType,
-      "bars" / "string" := StringType
+      "foos" / "int" := IntNotNull,
+      "foos" / "long" := LongNotNull,
+      "bars" / "int" := IntNotNull,
+      "bars" / "string" := StringNotNull
     )] = joined
 
     val result = joined.select(

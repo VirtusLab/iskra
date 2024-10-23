@@ -1,7 +1,7 @@
 package org.virtuslab.iskra
 
 import scala.quoted.*
-import org.virtuslab.iskra.types.BooleanOptType
+import org.virtuslab.iskra.types.BooleanOptLike
 
 trait Where[Schema, View <: SchemaView]:
   val view: View
@@ -36,7 +36,7 @@ object Where:
     import quotes.reflect.*
 
     '{ ${ condition }(using ${ where }.view) } match
-      case '{ $cond: Col[BooleanOptType] } =>
+      case '{ $cond: Col[BooleanOptLike] } =>
         '{
           val filtered = ${ where }.underlying.where(${ cond }.untyped)
           StructDataFrame[Schema](filtered)

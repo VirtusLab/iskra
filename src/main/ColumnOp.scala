@@ -8,210 +8,131 @@ import org.virtuslab.iskra.UntypedOps.typed
 import org.virtuslab.iskra.types.*
 import DataType.*
 
+trait ColumnOp:
+  type Out <: DataType
+
 object ColumnOp:
-  trait Plus[T1 <: DataType, T2 <: DataType]:
-    type Out <: DataType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped + col2.untyped).typed[Out]
+  trait ResultType[T <: DataType] extends ColumnOp:
+    override type Out = T
+
+  abstract class BinaryColumnOp[T1 <: DataType, T2 <: DataType](untypedOp: (UntypedColumn, UntypedColumn) => UntypedColumn) extends ColumnOp:
+    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = untypedOp(col1.untyped, col2.untyped).typed[Out]
+
+  class Plus[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ + _)
   object Plus:
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Plus[T1, T2] with
-      type Out = DataType.CommonNumericNonNullableType[T1, T2]
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Plus[T1, T2] with
-      type Out = DataType.CommonNumericNullableType[T1, T2]
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Plus[T1, T2] { type Out = CommonNumericType[T1, T2] }) =
+      new Plus[T1, T2] with ResultType[CommonNumericType[T1, T2]]
 
-  trait Minus[T1 <: DataType, T2 <: DataType]:
-    type Out <: DataType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped - col2.untyped).typed[Out]
+  class Minus[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ - _)
   object Minus:
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Minus[T1, T2] with
-      type Out = DataType.CommonNumericNonNullableType[T1, T2]
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Minus[T1, T2] with
-      type Out = DataType.CommonNumericNullableType[T1, T2]
-
-  trait Mult[T1 <: DataType, T2 <: DataType]:
-    type Out <: DataType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped * col2.untyped).typed[Out]
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Minus[T1, T2] { type Out = CommonNumericType[T1, T2] }) =
+      new Minus[T1, T2] with ResultType[CommonNumericType[T1, T2]]
+      
+  class Mult[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ * _)
   object Mult:
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Mult[T1, T2] with
-      type Out = DataType.CommonNumericNonNullableType[T1, T2]
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Mult[T1, T2] with
-      type Out = DataType.CommonNumericNullableType[T1, T2]
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Mult[T1, T2] { type Out = CommonNumericType[T1, T2] }) =
+      new Mult[T1, T2] with ResultType[CommonNumericType[T1, T2]]
 
-  trait Div[T1 <: DataType, T2 <: DataType]:
-    type Out <: DataType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped / col2.untyped).typed[Out]
+  class Div[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ / _)
   object Div:
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Div[T1, T2] with
-      type Out = DoubleType
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Div[T1, T2] with
-      type Out = DoubleOptType
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Div[T1, T2] { type Out = DoubleOfCommonNullability[T1, T2] }) =
+      new Div[T1, T2] with ResultType[DoubleOfCommonNullability[T1, T2]]
 
-  trait PlusPlus[T1 <: DataType, T2 <: DataType]:
-    type Out <: DataType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = concat(col1.untyped, col2.untyped).typed[Out]
+  class PlusPlus[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](concat(_, _))
   object PlusPlus:
-    given stringNonNullable: PlusPlus[StringType, StringType] with
-      type Out = StringType
-    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: PlusPlus[T1, T2] with
-      type Out = StringOptType
+    given strings[T1 <: StringOptLike, T2 <: StringOptLike]: (PlusPlus[T1, T2] { type Out = StringOfCommonNullability[T1, T2] }) =
+      new PlusPlus[T1, T2] with ResultType[StringOfCommonNullability[T1, T2]]
 
-  trait Eq[T1 <: DataType, T2 <: DataType]:
-    type Out <: BooleanOptType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped === col2.untyped).typed[Out]
+  class Eq[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ === _)
   object Eq:
-    given booleanNonNullable: Eq[BooleanType, BooleanType] with
-      type Out = BooleanType
-    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Eq[T1, T2] with
-      type Out = BooleanOptType
-    
-    given stringNonNullable: Eq[StringType, StringType] with
-      type Out = BooleanType
-    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Eq[T1, T2] with
-      type Out = BooleanOptType
+    given booleans[T1 <: BooleanOptLike, T2 <: BooleanOptLike]: (Eq[T1, T2] { type Out = CommonBooleanType[T1, T2] }) =
+      new Eq[T1, T2] with ResultType[CommonBooleanType[T1, T2]]
 
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Eq[T1, T2] with
-      type Out = BooleanType
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Eq[T1, T2] with
-      type Out = BooleanOptType
+    given strings[T1 <: StringOptLike, T2 <: StringOptLike]: (Eq[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Eq[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Eq[StructType[S1], StructType[S2]] with
-      type Out = BooleanType
-    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Eq[T1, T2] with
-      type Out = BooleanOptType
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Eq[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Eq[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-  trait Ne[-T1 <: DataType, -T2 <: DataType]:
-    type Out <: BooleanOptType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped =!= col2.untyped).typed[Out]
+    given structs[S1 <: Tuple, S2 <: Tuple, T1 <: StructOptLike[S1], T2 <: StructOptLike[S2]]: (Eq[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Eq[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
+
+  class Ne[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ =!= _)
   object Ne:
-    given booleanNonNullable: Ne[BooleanType, BooleanType] with
-      type Out = BooleanType
-    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Ne[T1, T2] with
-      type Out = BooleanOptType
-    
-    given stringNonNullable: Ne[StringType, StringType] with
-      type Out = BooleanType
-    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Ne[T1, T2] with
-      type Out = BooleanOptType
+    given booleans[T1 <: BooleanOptLike, T2 <: BooleanOptLike]: (Ne[T1, T2] { type Out = CommonBooleanType[T1, T2] }) =
+      new Ne[T1, T2] with ResultType[CommonBooleanType[T1, T2]]
 
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Ne[T1, T2] with
-      type Out = BooleanType
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Ne[T1, T2] with
-      type Out = BooleanOptType
+    given strings[T1 <: StringOptLike, T2 <: StringOptLike]: (Ne[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Ne[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Ne[StructType[S1], StructType[S2]] with
-      type Out = BooleanType
-    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Ne[T1, T2] with
-      type Out = BooleanOptType
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Ne[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Ne[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-  trait Lt[-T1 <: DataType, -T2 <: DataType]:
-    type Out <: BooleanOptType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped < col2.untyped).typed[Out]
+    given structs[S1 <: Tuple, S2 <: Tuple, T1 <: StructOptLike[S1], T2 <: StructOptLike[S2]]: (Ne[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Ne[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
+
+  class Lt[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ < _)
   object Lt:
-    given booleanNonNullable: Lt[BooleanType, BooleanType] with
-      type Out = BooleanType
-    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Lt[T1, T2] with
-      type Out = BooleanOptType
-    
-    given stringNonNullable: Lt[StringType, StringType] with
-      type Out = BooleanType
-    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Lt[T1, T2] with
-      type Out = BooleanOptType
+    given booleans[T1 <: BooleanOptLike, T2 <: BooleanOptLike]: (Lt[T1, T2] { type Out = CommonBooleanType[T1, T2] }) =
+      new Lt[T1, T2] with ResultType[CommonBooleanType[T1, T2]]
 
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Lt[T1, T2] with
-      type Out = BooleanType
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Lt[T1, T2] with
-      type Out = BooleanOptType
+    given strings[T1 <: StringOptLike, T2 <: StringOptLike]: (Lt[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Lt[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Lt[StructType[S1], StructType[S2]] with
-      type Out = BooleanType
-    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Lt[T1, T2] with
-      type Out = BooleanOptType
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Lt[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Lt[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-  trait Le[-T1 <: DataType, -T2 <: DataType]:
-    type Out <: BooleanOptType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped <= col2.untyped).typed[Out]
+    given structs[S1 <: Tuple, S2 <: Tuple, T1 <: StructOptLike[S1], T2 <: StructOptLike[S2]]: (Lt[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Lt[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
+
+  class Le[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ <= _)
   object Le:
-    given booleanNonNullable: Le[BooleanType, BooleanType] with
-      type Out = BooleanType
-    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Le[T1, T2] with
-      type Out = BooleanOptType
-    
-    given stringNonNullable: Le[StringType, StringType] with
-      type Out = BooleanType
-    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Le[T1, T2] with
-      type Out = BooleanOptType
+    given booleans[T1 <: BooleanOptLike, T2 <: BooleanOptLike]: (Le[T1, T2] { type Out = CommonBooleanType[T1, T2] }) =
+      new Le[T1, T2] with ResultType[CommonBooleanType[T1, T2]]
 
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Le[T1, T2] with
-      type Out = BooleanType
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Le[T1, T2] with
-      type Out = BooleanOptType
+    given strings[T1 <: StringOptLike, T2 <: StringOptLike]: (Le[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Le[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Le[StructType[S1], StructType[S2]] with
-      type Out = BooleanType
-    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Le[T1, T2] with
-      type Out = BooleanOptType
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Le[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Le[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-  trait Gt[-T1 <: DataType, -T2 <: DataType]:
-    type Out <: BooleanOptType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped > col2.untyped).typed[Out]
+    given structs[S1 <: Tuple, S2 <: Tuple, T1 <: StructOptLike[S1], T2 <: StructOptLike[S2]]: (Le[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Le[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
+
+  class Gt[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ > _)
   object Gt:
-    given booleanNonNullable: Gt[BooleanType, BooleanType] with
-      type Out = BooleanType
-    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Gt[T1, T2] with
-      type Out = BooleanOptType
-    
-    given stringNonNullable: Gt[StringType, StringType] with
-      type Out = BooleanType
-    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Gt[T1, T2] with
-      type Out = BooleanOptType
+    given booleans[T1 <: BooleanOptLike, T2 <: BooleanOptLike]: (Gt[T1, T2] { type Out = CommonBooleanType[T1, T2] }) =
+      new Gt[T1, T2] with ResultType[CommonBooleanType[T1, T2]]
 
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Gt[T1, T2] with
-      type Out = BooleanType
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Gt[T1, T2] with
-      type Out = BooleanOptType
+    given strings[T1 <: StringOptLike, T2 <: StringOptLike]: (Gt[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Gt[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Gt[StructType[S1], StructType[S2]] with
-      type Out = BooleanType
-    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Gt[T1, T2] with
-      type Out = BooleanOptType
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Gt[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Gt[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-  trait Ge[-T1 <: DataType, -T2 <: DataType]:
-    type Out <: BooleanOptType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped >= col2.untyped).typed[Out]
+    given structs[S1 <: Tuple, S2 <: Tuple, T1 <: StructOptLike[S1], T2 <: StructOptLike[S2]]: (Gt[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Gt[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
+
+  class Ge[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ >= _)
   object Ge:
-    given booleanNonNullable: Ge[BooleanType, BooleanType] with
-      type Out = BooleanType
-    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Ge[T1, T2] with
-      type Out = BooleanOptType
-    
-    given stringNonNullable: Ge[StringType, StringType] with
-      type Out = BooleanType
-    given stringNullable[T1 <: StringOptType, T2 <: StringOptType]: Ge[T1, T2] with
-      type Out = BooleanOptType
+    given booleans[T1 <: BooleanOptLike, T2 <: BooleanOptLike]: (Ge[T1, T2] { type Out = CommonBooleanType[T1, T2] }) =
+      new Ge[T1, T2] with ResultType[CommonBooleanType[T1, T2]]
 
-    given numericNonNullable[T1 <: NumericType, T2 <: NumericType]: Ge[T1, T2] with
-      type Out = BooleanType
-    given numericNullable[T1 <: NumericOptType, T2 <: NumericOptType]: Ge[T1, T2] with
-      type Out = BooleanOptType
+    given strings[T1 <: StringOptLike, T2 <: StringOptLike]: (Ge[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Ge[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-    given structNonNullable[S1 <: Tuple, S2 <: Tuple]: Ge[StructType[S1], StructType[S2]] with
-      type Out = BooleanType
-    given structNullable[S1 <: Tuple, T1 <: StructOptType[S1], S2 <: Tuple, T2 <: StructOptType[S2]]: Ge[T1, T2] with
-      type Out = BooleanOptType
+    given numerics[T1 <: DoubleOptLike, T2 <: DoubleOptLike]: (Ge[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Ge[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
 
-  trait And[-T1 <: DataType, -T2 <: DataType]:
-    type Out <: BooleanOptType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped && col2.untyped).typed[Out]
+    given structs[S1 <: Tuple, S2 <: Tuple, T1 <: StructOptLike[S1], T2 <: StructOptLike[S2]]: (Ge[T1, T2] { type Out = BooleanOfCommonNullability[T1, T2] }) =
+      new Ge[T1, T2] with ResultType[BooleanOfCommonNullability[T1, T2]]
+
+  class And[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ && _)
   object And:
-    given booleanNonNullable: And[BooleanType, BooleanType] with
-      type Out = BooleanType
-    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: And[T1, T2] with
-      type Out = BooleanOptType
+    given booleans[T1 <: BooleanOptLike, T2 <: BooleanOptLike]: (And[T1, T2] { type Out = CommonBooleanType[T1, T2] }) =
+      new And[T1, T2] with ResultType[CommonBooleanType[T1, T2]]
 
-  trait Or[-T1 <: DataType, -T2 <: DataType]:
-    type Out <: BooleanOptType
-    def apply(col1: Col[T1], col2: Col[T2]): Col[Out] = (col1.untyped || col2.untyped).typed[Out]
+  class Or[T1 <: DataType, T2 <: DataType] extends BinaryColumnOp[T1, T2](_ || _)
   object Or:
-    given booleanNonNullable: Or[BooleanType, BooleanType] with
-      type Out = BooleanType
-    given booleanNullable[T1 <: BooleanOptType, T2 <: BooleanOptType]: Or[T1, T2] with
-      type Out = BooleanOptType
+    given booleans[T1 <: BooleanOptLike, T2 <: BooleanOptLike]: (Or[T1, T2] { type Out = CommonBooleanType[T1, T2] }) =
+      new Or[T1, T2] with ResultType[CommonBooleanType[T1, T2]]

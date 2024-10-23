@@ -3,6 +3,7 @@ package org.virtuslab.iskra
 import scala.quoted.*
 
 import types.{DataType, Encoder, StructEncoder}
+import MacroHelpers.TupleSubtype
 
 
 class StructDataFrame[Schema](val untyped: UntypedDataFrame) extends DataFrame
@@ -20,7 +21,13 @@ object StructDataFrame:
     Expr.summon[Encoder[A]] match
       case Some(encoder) => encoder match
         case '{ $enc: StructEncoder[A] { type StructSchema = structSchema } } =>
-          Type.of[MacroHelpers.AsTuple[FrameSchema]] match
+          val frameSchemaTuple = Type.of[FrameSchema] match
+            case '[TupleSubtype[t]] =>
+              Type.of[t]
+            case '[t] =>
+              Type.of[t *: EmptyTuple]
+
+          frameSchemaTuple match
             case '[`structSchema`] =>
               '{ ClassDataFrame[A](${ df }.untyped) }
             case _ =>

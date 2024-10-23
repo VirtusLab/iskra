@@ -51,9 +51,9 @@ class WhenTest extends SparkUnitTest:
         when($.int === lit(1), lit(10))
           .when($.int === lit(2), lit(100L))
           .otherwise(lit(1000d))
-          .as("str")
+          .as("double")
       }
-      .asClass[Option[Double]].collect().toList
+      .asClass[Double].collect().toList
 
-    result shouldEqual Seq(Some(10d), Some(100d), Some(1000d))
+    result shouldEqual Seq(10d, 100d, 1000d)
   }

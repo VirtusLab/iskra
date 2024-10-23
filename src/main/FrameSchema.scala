@@ -6,20 +6,30 @@ import types.{DataType, Encoder, StructEncoder}
 import MacroHelpers.TupleSubtype
 
 object FrameSchema:
-  type Merge[S1, S2] = S1 match
-    case TupleSubtype[s1] => S2 match
-      case TupleSubtype[s2] => Tuple.Concat[s1, s2]
-      case _ => Tuple.Concat[s1, S2 *: EmptyTuple]
-    case _ => S2 match
-      case TupleSubtype[s2] => S1 *: s2
-      case _ => S1 *: S2 *: EmptyTuple
+  type AsTuple[A] = A match
+    case Tuple => A
+    case Any => A *: EmptyTuple
+
+  type FromTuple[T] = T match
+    case h *: EmptyTuple => h
+    case Tuple => T
+
+  type Merge[S1, S2] = (S1, S2) match
+    case (Tuple, Tuple) =>
+      Tuple.Concat[S1, S2]
+    case (Any, Tuple) =>
+      S1 *: S2
+    case (Tuple, Any) =>
+      Tuple.Append[S1, S2]
+    case (Any, Any) =>
+      (S1, S2)
 
   type NullableLabeledDataType[T] = T match
-    case label := tpe => label := DataType.Nullable[tpe]
+    case label := tpe => label := DataType.AsNullable[tpe]
 
   type NullableSchema[T] = T match
-    case TupleSubtype[s] => Tuple.Map[s, NullableLabeledDataType]
-    case _ => NullableLabeledDataType[T]
+    case Tuple => Tuple.Map[T, NullableLabeledDataType]
+    case Any => NullableLabeledDataType[T]
 
   def reownType[Owner <: Name : Type](schema: Type[?])(using Quotes): Type[?] =
     schema match

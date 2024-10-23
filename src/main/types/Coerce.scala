@@ -1,17 +1,20 @@
 package org.virtuslab.iskra
 package types
 
-import DataType.{CommonNumericNonNullableType, CommonNumericNullableType, NumericOptType, NumericType}
-
-trait Coerce[-A <: DataType, -B <: DataType]:
+trait Coerce[A <: DataType, B <: DataType]:
   type Coerced <: DataType
 
-object Coerce:
-  given sameType[A <: DataType]: Coerce[A, A] with
+object Coerce extends CoerceLowPrio:
+  given sameType[A <: FinalDataType]: Coerce[A, A] with
     override type Coerced = A
 
-  given nullable[A <: NumericOptType, B <: NumericOptType]: Coerce[A, B] with
-    override type Coerced = CommonNumericNullableType[A, B]
+  given nullableFirst[A <: FinalDataType & Nullable, B <: FinalDataType & NonNullable](using A <:< NullableOf[B]): Coerce[A, B] with
+    override type Coerced = A
 
-  given nonNullable[A <: NumericType, B <: NumericType]: Coerce[A, B] with
-    override type Coerced = CommonNumericNonNullableType[A, B]
+  given nullableSecond[A <: FinalDataType & NonNullable, B <: FinalDataType & Nullable](using A <:< NonNullableOf[B]): Coerce[A, B] with
+    override type Coerced = B
+
+trait CoerceLowPrio:
+  given numeric[A <: FinalDataType & DoubleOptLike, B <: FinalDataType & DoubleOptLike]: (Coerce[A, B] { type Coerced = CommonNumericType[A, B] }) =
+    new Coerce[A, B]:
+      override type Coerced = CommonNumericType[A, B]

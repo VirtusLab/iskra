@@ -1,7 +1,7 @@
 package org.virtuslab.iskra
 
 import scala.quoted.*
-import types.{DataType, Encoder, StructType, StructEncoder}
+import types.{DataType, Encoder, struct, StructEncoder, StructNotNull}
 
 object UntypedOps:
   extension (untyped: UntypedColumn)
@@ -12,5 +12,5 @@ object UntypedOps:
 
   private def typedDataFrameImpl[A : Type](df: Expr[UntypedDataFrame], encoder: Expr[StructEncoder[A]])(using Quotes) =
     encoder match
-      case '{ ${e}: Encoder.Aux[tpe, StructType[t]] } =>
+      case '{ ${e}: Encoder.Aux[tpe, StructNotNull[t]] } =>
         '{ ClassDataFrame[A](${ df }) }

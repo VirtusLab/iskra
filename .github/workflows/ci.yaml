@@ -15,6 +15,8 @@ jobs:
       - name: Setup coursier cache
         uses: coursier/cache-action@v6.3
       - name: Setup scala-cli
-        uses: VirtusLab/scala-cli-setup@v1.5.1
-      - name: Run tests
+        uses: VirtusLab/scala-cli-setup@v1.9.1
+      - name: Run tests (Scala LTS)
         run: scala-cli test . --jvm temurin:11
+      - name: Run tests (Scala Next)
+        run: scala-cli test . --jvm temurin:11 -S 3.7.3

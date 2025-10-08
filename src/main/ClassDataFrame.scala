@@ -35,7 +35,7 @@ object ClassDataFrame:
         val classTag = Expr.summon[ClassTag[A]].getOrElse(report.errorAndAbort(s"Could not summon ClassTag for ${Type.show[A]}"))
         encoder match
           case '{ $enc: StructEncoder[A] { type StructSchema = structSchema } } =>
-            '{ ${ df }.untyped.collect.map(row => ${ enc }.decode(row).asInstanceOf[A])(${ classTag }) }    
+            '{ ${ df }.untyped.collect.map(row => ${ enc }.decode(row).asInstanceOf[A])(using ${ classTag }) }    
           case '{ $enc: Encoder[A] { type ColumnType = colType } } =>
-            '{ ${ df }.untyped.collect.map(row => ${ enc }.decode(row(0)).asInstanceOf[A])(${ classTag }) }
+            '{ ${ df }.untyped.collect.map(row => ${ enc }.decode(row(0)).asInstanceOf[A])(using ${ classTag }) }
       case None => report.errorAndAbort(s"Could not summon encoder for ${Type.show[A]}")

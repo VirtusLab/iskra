@@ -27,7 +27,7 @@ object Select:
 
   given selectOps: {} with
     extension [View <: SchemaView](select: Select[View])
-      transparent inline def apply[C <: NamedColumns](columns: View ?=> C): StructDataFrame[?] =
+      transparent inline def apply[C <: NamedColumns](columns: (`$`: View) ?=> C): StructDataFrame[?] =
         ${ applyImpl[View, C]('select, 'columns) }
 
   private def applyImpl[View <: SchemaView : Type, C : Type](using Quotes)(select: Expr[Select[View]], columns: Expr[View ?=> C]) =
@@ -44,4 +44,5 @@ object Select:
                   StructDataFrame[s](${ select }.underlying.select(cols*))
                 }
       case None =>
-        throw CollectColumns.CannotCollectColumns(Type.show[C])
+        // TODO: What should be returned here for best error messages?
+        report.errorAndAbort("Cannot collect columns: " + Type.show[C])

@@ -47,4 +47,5 @@ object WithColumns:
                   StructDataFrame[Tuple.Concat[Schema, collectedCols]](withColumnsAppended)
                 }
       case None =>
-        throw CollectColumns.CannotCollectColumns(Type.show[C])
+        // TODO: What should be returned here for best error messages?
+        report.errorAndAbort("Cannot collect columns: " + Type.show[C])

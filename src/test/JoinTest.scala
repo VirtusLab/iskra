@@ -3,8 +3,6 @@ package org.virtuslab.iskra.test
 class JoinTest extends SparkUnitTest:
   import org.virtuslab.iskra.api.*
   import functions.lit
-  import Column.=== // by default shadowed by === from scalatest
-  
 
   case class Foo(int: Int, long: Long)
   case class Bar(int: Int, string: String)

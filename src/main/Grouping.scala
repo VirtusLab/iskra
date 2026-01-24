@@ -44,7 +44,8 @@ object GroupBy:
                         def groupedView = ${ groupedViewExpr }.asInstanceOf[GroupedView]
                     }
       case None =>
-        throw CollectColumns.CannotCollectColumns(Type.show[C])
+        // TODO: What should be returned here for best error messages?
+        report.errorAndAbort("Cannot collect columns: " + Type.show[C])
 
 // TODO: Rename to RelationalGroupedDataset and handle other aggregations: cube, rollup (and pivot?)
 trait GroupedDataFrame[FullView <: SchemaView]:
@@ -86,7 +87,8 @@ object GroupedDataFrame:
               )
             }
       case None =>
-        throw CollectColumns.CannotCollectColumns(Type.show[C])
+        // TODO: What should be returned here for best error messages?
+        report.errorAndAbort("Cannot collect columns: " + Type.show[C])
 
 trait Agg:
   type View <: SchemaView

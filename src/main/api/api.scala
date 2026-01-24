@@ -41,7 +41,7 @@ object api:
     StructNotNull,
     StructOrNull
   }
-  export UntypedOps.typed
+  export UntypedOps.unsafeTyped
   export org.virtuslab.iskra.$
   export org.virtuslab.iskra.{Column, Columns, Col, DataFrame, ClassDataFrame, NamedColumns, StructDataFrame, UntypedColumn, UntypedDataFrame, :=, /}
 

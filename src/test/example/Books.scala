@@ -16,13 +16,13 @@ import org.virtuslab.iskra.api.*
   val untypedBooks: UntypedDataFrame = spark.read.options(Map("header"->"true")).csv(dataFilePath) // UntypedDataFrame = sql.DataFrame
   untypedBooks.show()
   val books = untypedBooks
-    .typed[Book] // Unsafe: make sure `untypedBooks` has the right schema
+    .unsafeTyped[Book] // Unsafe: make sure `untypedBooks` has the right schema
     .asStruct
 
   import org.apache.spark.sql.functions.lower
 
   val authorlessBooks = books.select(
-    lower($.title.untyped).typed[StringNotNull].as("title"),
+    lower($.title.untyped).unsafeTyped[Col[StringNotNull]].as("title"),
     $.publicationYear
   )
   authorlessBooks.show()

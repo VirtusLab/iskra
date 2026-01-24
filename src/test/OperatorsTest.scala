@@ -83,8 +83,6 @@ class OperatorsTest extends SparkUnitTest:
   }
 
   test("eq") {
-    import Column.=== // by default shadowed by === from scalatest
-
     val result = foos.select(
       ($.boolean === $.boolean).as("_1"),
       ($.string === $.string).as("_2"),

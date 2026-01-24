@@ -28,8 +28,3 @@ object CollectColumns:
     new CollectColumns[H *: T]:
       type CollectedColumns = Tuple.Concat[collectHead.CollectedColumns, collectTail.CollectedColumns]
       def underlyingColumns(c: H *: T) = collectHead.underlyingColumns(c.head) ++ collectTail.underlyingColumns(c.tail)
-
-
-  // TODO Customize error message for different operations with an explanation
-  class CannotCollectColumns(typeName: String)
-    extends Exception(s"Could not find an instance of CollectColumns for ${typeName}")

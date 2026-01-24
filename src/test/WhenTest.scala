@@ -3,7 +3,6 @@ package org.virtuslab.iskra.test
 class WhenTest extends SparkUnitTest:
   import org.virtuslab.iskra.api.*
   import functions.{lit, when}
-  import Column.=== // by default shadowed by === from scalatest
 
   case class Foo(int: Int)
 

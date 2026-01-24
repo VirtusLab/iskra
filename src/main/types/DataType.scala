@@ -87,29 +87,29 @@ final class struct[Schema <: Tuple] extends FinalDataType, NonNullableOf[struct_
 type StructOrNull[Schema <: Tuple] = struct_?[Schema]
 type StructNotNull[Schema <: Tuple] = struct[Schema]
 
-type CommonNumericType[T1 <: DataType, T2 <: DataType] <: DataType = (T1, T2) match
-  case (ByteLike, ByteLike) => byte
-  case (ByteOptLike, ByteOptLike) => byte_?
-  case (ShortLike, ShortLike) => short
-  case (ShortOptLike, ShortOptLike) => short_?
-  case (IntLike, IntLike) => int
-  case (IntOptLike, IntOptLike) => int_?
-  case (LongLike, LongLike) => long
-  case (LongOptLike, LongOptLike) => long_?
-  case (FloatLike, FloatLike) => float
-  case (FloatOptLike, FloatOptLike) => float_?
-  case (DoubleLike, DoubleLike) => double
-  case (DoubleOptLike, DoubleOptLike) => double_?
+type CommonNumericType[T1, T2] <: DataType = (T1, T2) match
+  case (ByteLike, ByteLike) => ByteNotNull
+  case (ByteOptLike, ByteOptLike) => ByteOrNull
+  case (ShortLike, ShortLike) => ShortNotNull
+  case (ShortOptLike, ShortOptLike) => ShortOrNull
+  case (IntLike, IntLike) => IntNotNull
+  case (IntOptLike, IntOptLike) => IntOrNull
+  case (LongLike, LongLike) => LongNotNull
+  case (LongOptLike, LongOptLike) => LongOrNull
+  case (FloatLike, FloatLike) => FloatNotNull
+  case (FloatOptLike, FloatOptLike) => FloatOrNull
+  case (DoubleLike, DoubleLike) => DoubleNotNull
+  case (DoubleOptLike, DoubleOptLike) => DoubleOrNull
 
-type CommonBooleanType[T1 <: DataType, T2 <: DataType] <: DataType = (T1, T2) match
+type CommonBooleanType[T1, T2] <: DataType = (T1, T2) match
   case (BooleanLike, BooleanLike) => BooleanNotNull
   case (BooleanOptLike, BooleanOptLike) => BooleanOrNull
 
-type CommonNullability[T1 <: Nullability, T2 <: Nullability] <: Nullability = (T1, T2) match
+type CommonNullability[T1, T2] <: Nullability = (T1, T2) match
   case (NonNullable, NonNullable) => NonNullable
-  case _ => Nullable
+  case (Nullability, Nullability) => Nullable
 
-type BooleanOfNullability[N <: Nullability] <: DataType = N match
+type BooleanOfNullability[N] <: DataType = N match
   case NonNullable => BooleanNotNull
   case Nullable => BooleanOrNull
 
@@ -117,10 +117,10 @@ type BooleanOfCommonNullability[T1, T2] <: DataType = (T1, T2) match
   case (NonNullable, NonNullable) => BooleanNotNull
   case (Nullability, Nullability) => BooleanOrNull
 
-type DoubleOfCommonNullability[T1 <: DoubleOptLike, T2 <: DoubleOptLike] <: DataType = (T1, T2) match
+type DoubleOfCommonNullability[T1, T2] <: DataType = (T1, T2) match
   case (DoubleLike, DoubleLike) => DoubleNotNull
   case (DoubleOptLike, DoubleOptLike) => DoubleOrNull
 
-type StringOfCommonNullability[T1 <: StringOptLike, T2 <: StringOptLike] <: DataType = (T1, T2) match
+type StringOfCommonNullability[T1, T2] <: DataType = (T1, T2) match
   case (StringLike, StringLike) => StringNotNull
   case (StringOptLike, StringOptLike) => StringOrNull
